@@ -1,4 +1,4 @@
-./examples/
-./compile_commands.json
-./.cache/
-./bin/
+examples/
+compile_commands.json
+.cache/
+bin/
