@@ -138,11 +138,9 @@ int main(void)
 		// update
 		// ------------------------------------------------
 		if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
-			/* printf("Right or d pressed\n"); */
 			paddle.x += 10.0f;
 		}
 		if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
-			/* printf("Right or d pressed\n"); */
 			paddle.x -= 10.0f;
 		}
 
@@ -194,7 +192,6 @@ int main(void)
 				ball.velocity.x -= 0.01f;
 				ball.velocity.y -= 0.01f;
 				end_counter--;
-				print_int(end_counter);
 			}
 		} else {
 			ball.velocity.x = 0.0f;
