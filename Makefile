@@ -6,10 +6,12 @@ LIBS = -l:libraylib.a -lm -ldl -lpthread
 BIN_DIR = ./bin
 SRC_DIR = ./src
 
-first: 
+breakout: 
 	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) ./breakout.c  -o $(BIN_DIR)/breakout $(LIB_PATH) $(LIBS) && ./bin/breakout
+	$(CC) $(CFLAGS) ./breakout.c  -o $(BIN_DIR)/breakout $(LIB_PATH) $(LIBS)
 
+run:
+	./bin/breakout
 
 clean:
 	rm -rf $(BIN_DIR)
