@@ -16,6 +16,11 @@
 	DrawRectangleLines(rec.x, rec.y, rec.width, rec.height, colour)
 
 typedef struct {
+	bool loss;
+	bool win;
+	bool paused;
+} State;
+typedef struct {
 	int startPosX;
 	int startPosY;
 	int endPosX;
@@ -31,6 +36,7 @@ typedef struct {
 typedef struct {
 	Vector2 centre;
 	Vector2 velocity;
+	Vector2 direction;
 
 	float radius;
 	Color color;
@@ -38,12 +44,23 @@ typedef struct {
 
 int main(void)
 {
-	bool debug = true;
-	float screen_width = 960.0f;
-	float screen_height = 540.0f;
-	float num_row = 20.0;
+	char *title = "BREAKOUT";
+	char *level_win = "You Won!";
+	char *level_loss = "You Lost!";
+	char *paused = "Press Space to continue";
+	int title_font_size = 30;
+	int big_font_size = 40;
+	bool debug = false;
+	float screen_width = 1920.0f;
+	float screen_height = 1080.0f;
+	float num_row = 10.0;
 
-	float block_dimension = screen_width / num_row;
+	bool paddle_collision = false;
+	bool block_collision = false;
+
+	State state = { .win = false, .loss = false, .paused = true };
+
+	float block_width = screen_width / num_row;
 
 	Block blocks[NUM_ROW] = { 0 };
 	float rec_width = screen_width / 5.0;
@@ -52,9 +69,11 @@ int main(void)
 	Ball ball = {
 		.centre.x = screen_width / 2.0,
 		.centre.y = screen_height - (screen_height / 4),
-		.velocity.x = 0.5,
-		.velocity.y = 1.0,
-		.radius = 10.0,
+		.velocity.x = 2.0,
+		.velocity.y = 4.0,
+		.direction.x = 1,
+		.direction.y = 1,
+		.radius = 20.0,
 		.color = BLUE,
 	};
 
@@ -94,21 +113,21 @@ int main(void)
 	}
 	// init blocks
 	int block_count = 0;
-	for (int i = block_dimension; i < screen_width - block_dimension;
-	     i += block_dimension) {
+	for (int i = block_width; i < screen_width - block_width;
+	     i += block_width) {
 		blocks[block_count] = (Block){
 			.rec = (Rectangle){ .x = i,
 					    .y = screen_height / 3.0 - 10.0,
-					    .width = block_dimension,
-					    .height = block_dimension },
+					    .width = block_width,
+					    .height = block_width / 2 },
 			.alive = true,
 		};
 
 		block_count++;
 	}
 
-	bool paddle_collision = false;
-	bool block_collision = false;
+	int alive_blocks = block_count;
+	int end_counter = 1200;
 
 	SetTargetFPS(144);
 
@@ -116,6 +135,21 @@ int main(void)
 		   "raylib [core] example - basic window");
 
 	while (!WindowShouldClose()) {
+		// update
+		// ------------------------------------------------
+		if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
+			/* printf("Right or d pressed\n"); */
+			paddle.x += 10.0f;
+		}
+		if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
+			/* printf("Right or d pressed\n"); */
+			paddle.x -= 10.0f;
+		}
+
+		if (IsKeyDown(KEY_SPACE)) {
+			state.paused = !state.paused;
+		}
+
 		paddle_collision = CheckCollisionCircleRec(ball.centre,
 							   ball.radius, paddle);
 
@@ -129,32 +163,54 @@ int main(void)
 
 			if (block_collision) {
 				blocks[i].alive = false;
-				ball.velocity.y *= -1.1;
-				ball.velocity.x *= 1.1;
+				alive_blocks--;
+				if (alive_blocks == 0) {
+					state.win = true;
+				}
+				ball.direction.y *= -1.0;
+				ball.direction.x *= 1.0;
 				break;
 			}
 		}
 
 		if (paddle_collision) {
-			ball.velocity.y *= -1.0;
+			ball.direction.y *= -1.0;
 		}
 
 		if ((ball.centre.x >= (screen_width - ball.radius)) ||
 		    (ball.centre.x <= ball.radius)) {
-			ball.velocity.x *= -1.0f;
+			ball.direction.x *= -1.0f;
 		}
 
-		if ((ball.centre.y >= (screen_height - ball.radius)) ||
-		    (ball.centre.y <= ball.radius)) {
-			ball.velocity.y *= -1.0f;
+		if (ball.centre.y >= (screen_height - ball.radius)) {
+			state.loss = true;
+		}
+		if ((ball.centre.y <= ball.radius)) {
+			ball.direction.y *= -1.0f;
 		}
 
-		ball.centre.x += ball.velocity.x;
-		ball.centre.y += ball.velocity.y;
+		if (end_counter != 0) {
+			if (state.win) {
+				ball.velocity.x -= 0.01f;
+				ball.velocity.y -= 0.01f;
+				end_counter--;
+				print_int(end_counter);
+			}
+		} else {
+			ball.velocity.x = 0.0f;
+			ball.velocity.y = 0.0f;
+		}
 
+		if (!state.paused) {
+			ball.centre.x += (ball.velocity.x * ball.direction.x);
+			ball.centre.y += (ball.velocity.y * ball.direction.y);
+		}
+
+		// ----------------------------------------------
 		BeginDrawing();
 		ClearBackground(BLACK);
 
+		DrawFPS(10, 10);
 		for (int row = 0; row < block_count; ++row) {
 			if (blocks[row].alive) {
 				DrawRectangleRec(blocks[row].rec, RED);
@@ -184,8 +240,38 @@ int main(void)
 		DrawCircle(ball.centre.x, ball.centre.y, ball.radius,
 			   ball.color);
 
-		DrawText("BREAKOUT", screen_width / 2 - screen_width / 18,
-			 screen_height / 7, 20, LIGHTGRAY);
+		if (state.paused) {
+			DrawText(paused,
+				 screen_width / 2 -
+					 ((float)MeasureText(paused,
+							     big_font_size) /
+					  2),
+				 screen_height / 2, big_font_size, LIGHTGRAY);
+
+			DrawText(title,
+				 screen_width / 2 -
+					 ((float)MeasureText(title,
+							     title_font_size) /
+					  2),
+				 screen_height / 7, title_font_size, GREEN);
+		}
+		if (state.win) {
+			DrawText(level_win,
+				 screen_width / 2 -
+					 ((float)MeasureText(level_win,
+							     big_font_size) /
+					  2),
+				 screen_height / 2, big_font_size, YELLOW);
+		}
+
+		if (state.loss && !state.win) {
+			DrawText(level_loss,
+				 screen_width / 2 -
+					 ((float)MeasureText(level_loss,
+							     big_font_size) /
+					  2),
+				 screen_height / 2, big_font_size, ORANGE);
+		}
 		EndDrawing();
 	}
 
