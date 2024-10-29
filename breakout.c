@@ -1,6 +1,7 @@
 #include "raylib.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #define NUM_ROW 20
 #define RULER_INC 96
 #define print_int(val) printf(#val " = %d\n", val)
@@ -25,6 +26,7 @@ typedef struct {
 	int startPosY;
 	int endPosX;
 	int endPosY;
+
 	Color color;
 } Line;
 
@@ -32,6 +34,11 @@ typedef struct {
 	Rectangle rec;
 	bool alive;
 } Block;
+
+typedef struct {
+	Block *blocks;
+	int num_alive;
+} Blocks;
 
 typedef struct {
 	Vector2 centre;
@@ -42,31 +49,21 @@ typedef struct {
 	Color color;
 } Ball;
 
-int main(void)
+typedef struct {
+	Blocks *blocks_state;
+	Ball *ball;
+	Rectangle *paddle;
+} LevelOne;
+
+float screen_width = 1920.0f;
+float screen_height = 1080.0f;
+
+// TODO Cleanup memory from init
+void init_level_one(LevelOne *level_one)
 {
-	char *title = "BREAKOUT";
-	char *level_win = "You Won!";
-	char *level_loss = "You Lost!";
-	char *paused = "Press Space to continue";
-	int title_font_size = 30;
-	int big_font_size = 40;
-	bool debug = false;
-	float screen_width = 1920.0f;
-	float screen_height = 1080.0f;
-	float num_row = 10.0;
+	level_one->ball = malloc(sizeof(Ball));
 
-	bool paddle_collision = false;
-	bool block_collision = false;
-
-	State state = { .win = false, .loss = false, .paused = true };
-
-	float block_width = screen_width / num_row;
-
-	Block blocks[NUM_ROW] = { 0 };
-	float rec_width = screen_width / 5.0;
-	Line ruler[RULER_INC] = { 0 };
-
-	Ball ball = {
+	*level_one->ball = (Ball){
 		.centre.x = screen_width / 2.0,
 		.centre.y = screen_height - (screen_height / 4),
 		.velocity.x = 2.0,
@@ -77,11 +74,55 @@ int main(void)
 		.color = BLUE,
 	};
 
-	Rectangle paddle =
+	level_one->paddle = malloc(sizeof(Rectangle));
+
+	float rec_width = screen_width / 5.0;
+	*level_one->paddle =
 		(Rectangle){ .x = screen_width / 2.0 - (rec_width / 2),
 			     .y = screen_height - 50.0,
 			     .width = rec_width,
 			     .height = 20.0 };
+
+	float num_row = 10.0;
+	float block_width = screen_width / num_row;
+
+	level_one->blocks_state = malloc(sizeof(Blocks));
+	level_one->blocks_state->blocks = malloc(sizeof(Block) * NUM_ROW);
+
+	// TODO Something wrong with init or collision
+	// init blocks
+	int block_count = 0;
+	for (int i = block_width; i < screen_width - block_width;
+	     i += block_width) {
+		level_one->blocks_state->blocks[block_count] = (Block){
+			.rec = (Rectangle){ .x = i,
+					    .y = screen_height / 3.0 - 10.0,
+					    .width = block_width,
+					    .height = block_width / 2 },
+			.alive = true,
+		};
+
+		block_count++;
+	}
+	level_one->blocks_state->num_alive = block_count;
+}
+
+int main(void)
+{
+	char *title = "BREAKOUT";
+	char *level_win = "You Won!";
+	char *level_loss = "You Lost!";
+	char *paused = "Press Space to continue";
+	int title_font_size = 30;
+	int big_font_size = 40;
+	bool debug = false;
+
+	bool paddle_collision = false;
+	bool block_collision = false;
+
+	State state = { .win = false, .loss = false, .paused = true };
+
+	Line ruler[RULER_INC] = { 0 };
 
 	Line horizontal = (Line){
 		.startPosX = 0,
@@ -98,6 +139,7 @@ int main(void)
 		.endPosY = 0,
 		.color = WHITE,
 	};
+
 	int ruler_count = 0;
 
 	// init ruler
@@ -111,22 +153,10 @@ int main(void)
 		};
 		ruler_count++;
 	}
-	// init blocks
-	int block_count = 0;
-	for (int i = block_width; i < screen_width - block_width;
-	     i += block_width) {
-		blocks[block_count] = (Block){
-			.rec = (Rectangle){ .x = i,
-					    .y = screen_height / 3.0 - 10.0,
-					    .width = block_width,
-					    .height = block_width / 2 },
-			.alive = true,
-		};
 
-		block_count++;
-	}
-
-	int alive_blocks = block_count;
+	LevelOne l1 = { 0 };
+	init_level_one(&l1);
+	print_block(l1.blocks_state->blocks[0]);
 	int end_counter = 1200;
 
 	SetTargetFPS(144);
@@ -138,69 +168,77 @@ int main(void)
 		// update
 		// ------------------------------------------------
 		if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
-			paddle.x += 10.0f;
+			l1.paddle->x += 10.0f;
 		}
 		if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
-			paddle.x -= 10.0f;
+			l1.paddle->x -= 10.0f;
 		}
 
 		if (IsKeyDown(KEY_SPACE)) {
 			state.paused = !state.paused;
 		}
 
-		paddle_collision = CheckCollisionCircleRec(ball.centre,
-							   ball.radius, paddle);
+		/* if (IsKeyDown(KEY_R)) { */
+		/* 	state.paused = !state.paused; */
+		/* } */
 
-		for (int i = 0; i < block_count; ++i) {
-			if (!blocks[i].alive) {
+		// TODO Something wrong with init or collision
+		paddle_collision = CheckCollisionCircleRec(
+			l1.ball->centre, l1.ball->radius, *l1.paddle);
+
+		for (int i = 0; i < l1.blocks_state->num_alive; ++i) {
+			if (!l1.blocks_state->blocks[i].alive) {
 				continue;
 			}
 
 			block_collision = CheckCollisionCircleRec(
-				ball.centre, ball.radius, blocks[i].rec);
+				l1.ball->centre, l1.ball->radius,
+				l1.blocks_state->blocks[i].rec);
 
 			if (block_collision) {
-				blocks[i].alive = false;
-				alive_blocks--;
-				if (alive_blocks == 0) {
+				l1.blocks_state->blocks[i].alive = false;
+				l1.blocks_state->num_alive--;
+				if (l1.blocks_state->num_alive == 0) {
 					state.win = true;
 				}
-				ball.direction.y *= -1.0;
-				ball.direction.x *= 1.0;
+				l1.ball->direction.y *= -1.0;
+				l1.ball->direction.x *= 1.0;
 				break;
 			}
 		}
 
 		if (paddle_collision) {
-			ball.direction.y *= -1.0;
+			l1.ball->direction.y *= -1.0;
 		}
 
-		if ((ball.centre.x >= (screen_width - ball.radius)) ||
-		    (ball.centre.x <= ball.radius)) {
-			ball.direction.x *= -1.0f;
+		if ((l1.ball->centre.x >= (screen_width - l1.ball->radius)) ||
+		    (l1.ball->centre.x <= l1.ball->radius)) {
+			l1.ball->direction.x *= -1.0f;
 		}
 
-		if (ball.centre.y >= (screen_height - ball.radius)) {
+		if (l1.ball->centre.y >= (screen_height - l1.ball->radius)) {
 			state.loss = true;
 		}
-		if ((ball.centre.y <= ball.radius)) {
-			ball.direction.y *= -1.0f;
+		if ((l1.ball->centre.y <= l1.ball->radius)) {
+			l1.ball->direction.y *= -1.0f;
 		}
 
 		if (end_counter != 0) {
 			if (state.win) {
-				ball.velocity.x -= 0.01f;
-				ball.velocity.y -= 0.01f;
+				l1.ball->velocity.x -= 0.01f;
+				l1.ball->velocity.y -= 0.01f;
 				end_counter--;
 			}
 		} else {
-			ball.velocity.x = 0.0f;
-			ball.velocity.y = 0.0f;
+			l1.ball->velocity.x = 0.0f;
+			l1.ball->velocity.y = 0.0f;
 		}
 
 		if (!state.paused) {
-			ball.centre.x += (ball.velocity.x * ball.direction.x);
-			ball.centre.y += (ball.velocity.y * ball.direction.y);
+			l1.ball->centre.x +=
+				(l1.ball->velocity.x * l1.ball->direction.x);
+			l1.ball->centre.y +=
+				(l1.ball->velocity.y * l1.ball->direction.y);
 		}
 
 		// ----------------------------------------------
@@ -208,10 +246,13 @@ int main(void)
 		ClearBackground(BLACK);
 
 		DrawFPS(10, 10);
-		for (int row = 0; row < block_count; ++row) {
-			if (blocks[row].alive) {
-				DrawRectangleRec(blocks[row].rec, RED);
-				DrawRectangleLinesRec(blocks[row].rec, WHITE);
+		for (int row = 0; row < l1.blocks_state->num_alive; ++row) {
+			if (l1.blocks_state->blocks[row].alive) {
+				DrawRectangleRec(
+					l1.blocks_state->blocks[row].rec, RED);
+				DrawRectangleLinesRec(
+					l1.blocks_state->blocks[row].rec,
+					WHITE);
 			}
 		}
 
@@ -233,9 +274,9 @@ int main(void)
 				 horizontal.color);
 		}
 
-		DrawRectangleRec(paddle, WHITE);
-		DrawCircle(ball.centre.x, ball.centre.y, ball.radius,
-			   ball.color);
+		DrawRectangleRec(*l1.paddle, WHITE);
+		DrawCircle(l1.ball->centre.x, l1.ball->centre.y,
+			   l1.ball->radius, l1.ball->color);
 
 		if (state.paused) {
 			DrawText(paused,
