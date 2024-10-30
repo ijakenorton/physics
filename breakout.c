@@ -4,13 +4,18 @@
 #include <stdlib.h>
 #define NUM_ROW 20
 #define RULER_INC 96
-#define print_int(val) printf(#val " = %d\n", val)
+#define expand_vec2(vec) vec.x, vec.y
 #define expand_rec(rec) rec.x, rec.y, rec.width, rec.height
+#define print_int(val) printf(#val " = %d\n", val)
 #define print_rec(rec) \
 	printf("x = %f\ny = %f\nwidth = %f\nheight = %f\n", expand_rec(rec))
+#define print_ball(ball)                                                                                                            \
+	printf("centre.x = %f\ncentre.y = %f\nvelocity.x = %f\nvelocity.y = %f\ndirection.x = %f\ndirection.y = %f\nradius = %f\n", \
+	       expand_vec2(ball->centre), expand_vec2(ball->velocity),                                                              \
+	       expand_vec2(ball->direction), ball->radius)
 
-#define print_block(block)                                              \
-	printf("x = %f\ny = %f\nwidth = %f\nheight = %f\nalive = %d\n", \
+#define print_block(block)                                           \
+	printf("x = %f y = %f\nwidth = %f height = %f alive = %d\n", \
 	       expand_rec(block.rec), block.alive)
 
 #define DrawRectangleLinesRec(rec, colour) \
@@ -38,7 +43,8 @@ typedef struct {
 typedef struct {
 	Block *blocks;
 	int num_alive;
-} Blocks;
+	int num_blocks;
+} BlocksState;
 
 typedef struct {
 	Vector2 centre;
@@ -50,15 +56,14 @@ typedef struct {
 } Ball;
 
 typedef struct {
-	Blocks *blocks_state;
+	BlocksState *blocks_state;
 	Ball *ball;
 	Rectangle *paddle;
 } LevelOne;
 
-float screen_width = 1920.0f;
-float screen_height = 1080.0f;
+float screen_width = 1920.0f / 2;
+float screen_height = 1080.0f / 2;
 
-// TODO Cleanup memory from init
 void init_level_one(LevelOne *level_one)
 {
 	level_one->ball = malloc(sizeof(Ball));
@@ -86,10 +91,9 @@ void init_level_one(LevelOne *level_one)
 	float num_row = 10.0;
 	float block_width = screen_width / num_row;
 
-	level_one->blocks_state = malloc(sizeof(Blocks));
+	level_one->blocks_state = malloc(sizeof(BlocksState));
 	level_one->blocks_state->blocks = malloc(sizeof(Block) * NUM_ROW);
 
-	// TODO Something wrong with init or collision
 	// init blocks
 	int block_count = 0;
 	for (int i = block_width; i < screen_width - block_width;
@@ -105,6 +109,9 @@ void init_level_one(LevelOne *level_one)
 		block_count++;
 	}
 	level_one->blocks_state->num_alive = block_count;
+	level_one->blocks_state->num_blocks = block_count;
+
+	print_int(block_count);
 }
 
 int main(void)
@@ -156,7 +163,6 @@ int main(void)
 
 	LevelOne l1 = { 0 };
 	init_level_one(&l1);
-	print_block(l1.blocks_state->blocks[0]);
 	int end_counter = 1200;
 
 	SetTargetFPS(144);
@@ -182,18 +188,19 @@ int main(void)
 		/* 	state.paused = !state.paused; */
 		/* } */
 
-		// TODO Something wrong with init or collision
 		paddle_collision = CheckCollisionCircleRec(
 			l1.ball->centre, l1.ball->radius, *l1.paddle);
 
-		for (int i = 0; i < l1.blocks_state->num_alive; ++i) {
+		for (int i = 0; i < l1.blocks_state->num_blocks; ++i) {
+			Block current_block = l1.blocks_state->blocks[i];
+
 			if (!l1.blocks_state->blocks[i].alive) {
 				continue;
 			}
 
 			block_collision = CheckCollisionCircleRec(
 				l1.ball->centre, l1.ball->radius,
-				l1.blocks_state->blocks[i].rec);
+				current_block.rec);
 
 			if (block_collision) {
 				l1.blocks_state->blocks[i].alive = false;
@@ -203,6 +210,7 @@ int main(void)
 				}
 				l1.ball->direction.y *= -1.0;
 				l1.ball->direction.x *= 1.0;
+
 				break;
 			}
 		}
@@ -246,13 +254,12 @@ int main(void)
 		ClearBackground(BLACK);
 
 		DrawFPS(10, 10);
-		for (int row = 0; row < l1.blocks_state->num_alive; ++row) {
-			if (l1.blocks_state->blocks[row].alive) {
-				DrawRectangleRec(
-					l1.blocks_state->blocks[row].rec, RED);
-				DrawRectangleLinesRec(
-					l1.blocks_state->blocks[row].rec,
-					WHITE);
+		for (int row = 0; row < l1.blocks_state->num_blocks; ++row) {
+			Block current_block = l1.blocks_state->blocks[row];
+
+			if (current_block.alive) {
+				DrawRectangleRec(current_block.rec, RED);
+				DrawRectangleLinesRec(current_block.rec, WHITE);
 			}
 		}
 
