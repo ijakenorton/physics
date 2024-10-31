@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -I./raylib-5.0_linux_amd64/include/
+CFLAGS = -Wall -Wextra -g -I./raylib-5.0_linux_amd64/include/
 LIB_PATH = -L./raylib-5.0_linux_amd64/lib/
 LIBS = -l:libraylib.a -lm -ldl -lpthread
 

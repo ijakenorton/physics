@@ -16,4 +16,4 @@ make run
 
 Unsure how far I will take this, currently just runs one basic level.
 
-[![Example video:](https://raw.githubusercontent.com/ijakenorton/breakout/main/teasers/bare_bones.png)](https://raw.githubusercontent.com/ijakenorton/breakout/main/teasers/bare_bones.mp4)
+https://raw.githubusercontent.com/ijakenorton/breakout/main/teasers/bare_bones.mp4
