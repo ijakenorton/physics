@@ -1,10 +1,12 @@
 #include "raylib.h"
 #include <stdbool.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #define NUM_ROW 20
 #define RULER_INC 96
+#define MAX_LEVEL 2
 #define expand_vec2(vec) vec.x, vec.y
 #define expand_rec(rec) rec.x, rec.y, rec.width, rec.height
 #define print_int(val) printf(#val " = %d\n", val)
@@ -64,8 +66,20 @@ typedef struct {
 	Level *cl;
 	int level_no;
 } State;
+
+typedef void (*LevelFunc)(Level *level, State *state);
+
 float screen_width = 1920.0f / 2;
 float screen_height = 1080.0f / 2;
+
+void assert_with_message(bool condition, char *message)
+{
+	print_int(condition);
+	if (!condition) {
+		fprintf(stderr, "%s", message);
+		exit(1);
+	}
+}
 
 void init_level_two(Level *level_two, State *state)
 {
@@ -140,9 +154,12 @@ void init_level_two(Level *level_two, State *state)
 			  .loss = false,
 			  .paused = true,
 			  .cl = level_two,
-			  .level_no = 2 };
+			  .level_no = 1 };
 }
+
 // TODO cleanup memory
+// Redundent passing the level and state as I'm currently using it but unsure if thats correct
+// So leaving the option
 void init_level_one(Level *level_one, State *state)
 {
 	if (level_one->ball == NULL) {
@@ -201,7 +218,7 @@ void init_level_one(Level *level_one, State *state)
 			  .loss = false,
 			  .paused = true,
 			  .cl = level_one,
-			  .level_no = 1 };
+			  .level_no = 0 };
 }
 
 int main(void)
@@ -251,12 +268,15 @@ int main(void)
 	}
 
 	State state = { 0 };
+	LevelFunc levels[2] = { 0 };
 
 	state.cl = malloc(sizeof(Level));
 	state.cl->blocks_state = NULL;
 	state.cl->ball = NULL;
 	state.cl->paddle = NULL;
-	init_level_one(state.cl, &state);
+	levels[0] = init_level_one;
+	levels[1] = init_level_two;
+	levels[state.level_no](state.cl, &state);
 
 	int end_counter = 1200;
 
@@ -291,23 +311,27 @@ int main(void)
 			}
 		}
 
-		if (IsKeyDown(KEY_R)) {
-			init_level_one(state.cl, &state);
+		if (IsKeyReleased(KEY_R)) {
+			levels[state.level_no](state.cl, &state);
 		}
 
-		if (IsKeyDown(KEY_ENTER)) {
-			if (state.win) {
-				state.level_no++;
-				switch (state.level_no) {
-				case 2:
-					init_level_two(state.cl, &state);
-					break;
-				default:
-					printf("Level: %d doesn't exist\n",
-					       state.level_no);
-					exit(1);
-				}
-			}
+		if (IsKeyReleased(KEY_ENTER)) {
+			//currently levels can be changed without winning
+			//as a dev door to help testing
+
+			/* if (state.win) { */
+			state.level_no++;
+			char state_assert_msg[100] = { 0 };
+
+			sprintf(state_assert_msg,
+				"State.level_no is: %d, must be less than %d\n",
+				state.level_no, MAX_LEVEL);
+
+			assert_with_message(state.level_no < MAX_LEVEL,
+					    state_assert_msg);
+
+			levels[state.level_no](state.cl, &state);
+			/* } */
 		}
 
 		paddle_collision = CheckCollisionCircleRec(
