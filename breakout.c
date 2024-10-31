@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #define NUM_ROW 20
 #define RULER_INC 96
 #define expand_vec2(vec) vec.x, vec.y
@@ -64,6 +65,7 @@ typedef struct {
 float screen_width = 1920.0f / 2;
 float screen_height = 1080.0f / 2;
 
+// TODO cleanup memory
 void init_level_one(LevelOne *level_one)
 {
 	level_one->ball = malloc(sizeof(Ball));
@@ -170,6 +172,8 @@ int main(void)
 	InitWindow((int)screen_width, (int)screen_height,
 		   "raylib [core] example - basic window");
 
+	int paused_cooldown = 1;
+	int initial_timer = 1;
 	while (!WindowShouldClose()) {
 		// update
 		// ------------------------------------------------
@@ -180,13 +184,23 @@ int main(void)
 			l1.paddle->x -= 10.0f;
 		}
 
-		if (IsKeyDown(KEY_SPACE)) {
-			state.paused = !state.paused;
+		// Bit of a hack to fix space being triggered multiple times
+		// Handles pause
+		if (IsKeyReleased(KEY_SPACE)) {
+			if (paused_cooldown == initial_timer) {
+				state.paused = !state.paused;
+			} else {
+				if (paused_cooldown == 0) {
+					paused_cooldown = initial_timer;
+				} else {
+					paused_cooldown--;
+				}
+			}
 		}
 
-		/* if (IsKeyDown(KEY_R)) { */
-		/* 	state.paused = !state.paused; */
-		/* } */
+		if (IsKeyDown(KEY_R)) {
+			init_level_one(&l1);
+		}
 
 		paddle_collision = CheckCollisionCircleRec(
 			l1.ball->centre, l1.ball->radius, *l1.paddle);
