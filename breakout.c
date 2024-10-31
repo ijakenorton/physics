@@ -23,11 +23,6 @@
 	DrawRectangleLines(rec.x, rec.y, rec.width, rec.height, colour)
 
 typedef struct {
-	bool loss;
-	bool win;
-	bool paused;
-} State;
-typedef struct {
 	int startPosX;
 	int startPosY;
 	int endPosX;
@@ -60,15 +55,99 @@ typedef struct {
 	BlocksState *blocks_state;
 	Ball *ball;
 	Rectangle *paddle;
-} LevelOne;
+} Level;
 
+typedef struct {
+	bool loss;
+	bool win;
+	bool paused;
+	Level *cl;
+	int level_no;
+} State;
 float screen_width = 1920.0f / 2;
 float screen_height = 1080.0f / 2;
 
-// TODO cleanup memory
-void init_level_one(LevelOne *level_one)
+void init_level_two(Level *level_two, State *state)
 {
-	level_one->ball = malloc(sizeof(Ball));
+	if (level_two->ball == NULL) {
+		level_two->ball = malloc(sizeof(Ball));
+	}
+
+	*level_two->ball = (Ball){
+		.centre.x = screen_width / 2.0,
+		.centre.y = screen_height - (screen_height / 4),
+		.velocity.x = 2.0,
+		.velocity.y = 4.0,
+		.direction.x = 1,
+		.direction.y = 1,
+		.radius = 20.0,
+		.color = BLUE,
+	};
+
+	if (level_two->paddle == NULL) {
+		level_two->paddle = malloc(sizeof(Rectangle));
+	}
+
+	float rec_width = screen_width / 5.0;
+	*level_two->paddle =
+		(Rectangle){ .x = screen_width / 2.0 - (rec_width / 2),
+			     .y = screen_height - 50.0,
+			     .width = rec_width,
+			     .height = 20.0 };
+
+	float num_row = 10.0;
+	float block_width = screen_width / num_row;
+	float block_height = block_width / 2;
+
+	if (level_two->blocks_state == NULL) {
+		level_two->blocks_state = malloc(sizeof(BlocksState));
+		level_two->blocks_state->blocks =
+			malloc(sizeof(Block) * NUM_ROW);
+	}
+
+	// init blocks
+	int block_count = 0;
+	for (int i = block_width; i < screen_width - block_width;
+	     i += block_width) {
+		level_two->blocks_state->blocks[block_count] = (Block){
+			.rec = (Rectangle){ .x = i,
+					    .y = screen_height / 3.0,
+					    .width = block_width,
+					    .height = block_height },
+			.alive = true,
+		};
+
+		block_count++;
+	}
+
+	for (int i = block_width + block_height;
+	     i < screen_width - block_width * 2; i += block_width) {
+		level_two->blocks_state->blocks[block_count] = (Block){
+			.rec = (Rectangle){ .x = i,
+					    .y = screen_height / 3.0 +
+						 block_height,
+					    .width = block_width,
+					    .height = block_height },
+			.alive = true,
+		};
+
+		block_count++;
+	}
+	level_two->blocks_state->num_alive = block_count;
+	level_two->blocks_state->num_blocks = block_count;
+
+	*state = (State){ .win = false,
+			  .loss = false,
+			  .paused = true,
+			  .cl = level_two,
+			  .level_no = 2 };
+}
+// TODO cleanup memory
+void init_level_one(Level *level_one, State *state)
+{
+	if (level_one->ball == NULL) {
+		level_one->ball = malloc(sizeof(Ball));
+	}
 
 	*level_one->ball = (Ball){
 		.centre.x = screen_width / 2.0,
@@ -81,7 +160,9 @@ void init_level_one(LevelOne *level_one)
 		.color = BLUE,
 	};
 
-	level_one->paddle = malloc(sizeof(Rectangle));
+	if (level_one->paddle == NULL) {
+		level_one->paddle = malloc(sizeof(Rectangle));
+	}
 
 	float rec_width = screen_width / 5.0;
 	*level_one->paddle =
@@ -93,8 +174,11 @@ void init_level_one(LevelOne *level_one)
 	float num_row = 10.0;
 	float block_width = screen_width / num_row;
 
-	level_one->blocks_state = malloc(sizeof(BlocksState));
-	level_one->blocks_state->blocks = malloc(sizeof(Block) * NUM_ROW);
+	if (level_one->blocks_state == NULL) {
+		level_one->blocks_state = malloc(sizeof(BlocksState));
+		level_one->blocks_state->blocks =
+			malloc(sizeof(Block) * NUM_ROW);
+	}
 
 	// init blocks
 	int block_count = 0;
@@ -113,12 +197,17 @@ void init_level_one(LevelOne *level_one)
 	level_one->blocks_state->num_alive = block_count;
 	level_one->blocks_state->num_blocks = block_count;
 
-	print_int(block_count);
+	*state = (State){ .win = false,
+			  .loss = false,
+			  .paused = true,
+			  .cl = level_one,
+			  .level_no = 1 };
 }
 
 int main(void)
 {
 	char *title = "BREAKOUT";
+	char *reset = "Reset: R";
 	char *level_win = "You Won!";
 	char *level_loss = "You Lost!";
 	char *paused = "Press Space to continue";
@@ -128,8 +217,6 @@ int main(void)
 
 	bool paddle_collision = false;
 	bool block_collision = false;
-
-	State state = { .win = false, .loss = false, .paused = true };
 
 	Line ruler[RULER_INC] = { 0 };
 
@@ -163,8 +250,14 @@ int main(void)
 		ruler_count++;
 	}
 
-	LevelOne l1 = { 0 };
-	init_level_one(&l1);
+	State state = { 0 };
+
+	state.cl = malloc(sizeof(Level));
+	state.cl->blocks_state = NULL;
+	state.cl->ball = NULL;
+	state.cl->paddle = NULL;
+	init_level_one(state.cl, &state);
+
 	int end_counter = 1200;
 
 	SetTargetFPS(144);
@@ -178,10 +271,10 @@ int main(void)
 		// update
 		// ------------------------------------------------
 		if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
-			l1.paddle->x += 10.0f;
+			state.cl->paddle->x += 10.0f;
 		}
 		if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
-			l1.paddle->x -= 10.0f;
+			state.cl->paddle->x -= 10.0f;
 		}
 
 		// Bit of a hack to fix space being triggered multiple times
@@ -199,68 +292,88 @@ int main(void)
 		}
 
 		if (IsKeyDown(KEY_R)) {
-			init_level_one(&l1);
+			init_level_one(state.cl, &state);
+		}
+
+		if (IsKeyDown(KEY_ENTER)) {
+			if (state.win) {
+				state.level_no++;
+				switch (state.level_no) {
+				case 2:
+					init_level_two(state.cl, &state);
+					break;
+				default:
+					printf("Level: %d doesn't exist\n",
+					       state.level_no);
+					exit(1);
+				}
+			}
 		}
 
 		paddle_collision = CheckCollisionCircleRec(
-			l1.ball->centre, l1.ball->radius, *l1.paddle);
+			state.cl->ball->centre, state.cl->ball->radius,
+			*state.cl->paddle);
 
-		for (int i = 0; i < l1.blocks_state->num_blocks; ++i) {
-			Block current_block = l1.blocks_state->blocks[i];
+		for (int i = 0; i < state.cl->blocks_state->num_blocks; ++i) {
+			Block current_block = state.cl->blocks_state->blocks[i];
 
-			if (!l1.blocks_state->blocks[i].alive) {
+			if (!state.cl->blocks_state->blocks[i].alive) {
 				continue;
 			}
 
 			block_collision = CheckCollisionCircleRec(
-				l1.ball->centre, l1.ball->radius,
+				state.cl->ball->centre, state.cl->ball->radius,
 				current_block.rec);
 
 			if (block_collision) {
-				l1.blocks_state->blocks[i].alive = false;
-				l1.blocks_state->num_alive--;
-				if (l1.blocks_state->num_alive == 0) {
+				state.cl->blocks_state->blocks[i].alive = false;
+				state.cl->blocks_state->num_alive--;
+				if (state.cl->blocks_state->num_alive == 0) {
 					state.win = true;
 				}
-				l1.ball->direction.y *= -1.0;
-				l1.ball->direction.x *= 1.0;
+				state.cl->ball->direction.y *= -1.0;
+				state.cl->ball->direction.x *= 1.0;
 
 				break;
 			}
 		}
 
 		if (paddle_collision) {
-			l1.ball->direction.y *= -1.0;
+			state.cl->ball->direction.y *= -1.0;
 		}
 
-		if ((l1.ball->centre.x >= (screen_width - l1.ball->radius)) ||
-		    (l1.ball->centre.x <= l1.ball->radius)) {
-			l1.ball->direction.x *= -1.0f;
+		if ((state.cl->ball->centre.x >=
+		     (screen_width - state.cl->ball->radius)) ||
+		    (state.cl->ball->centre.x <= state.cl->ball->radius)) {
+			state.cl->ball->direction.x *= -1.0f;
 		}
 
-		if (l1.ball->centre.y >= (screen_height - l1.ball->radius)) {
+		if (state.cl->ball->centre.y >=
+		    (screen_height - state.cl->ball->radius)) {
 			state.loss = true;
 		}
-		if ((l1.ball->centre.y <= l1.ball->radius)) {
-			l1.ball->direction.y *= -1.0f;
+		if ((state.cl->ball->centre.y <= state.cl->ball->radius)) {
+			state.cl->ball->direction.y *= -1.0f;
 		}
 
 		if (end_counter != 0) {
 			if (state.win) {
-				l1.ball->velocity.x -= 0.01f;
-				l1.ball->velocity.y -= 0.01f;
+				state.cl->ball->velocity.x -= 0.01f;
+				state.cl->ball->velocity.y -= 0.01f;
 				end_counter--;
 			}
 		} else {
-			l1.ball->velocity.x = 0.0f;
-			l1.ball->velocity.y = 0.0f;
+			state.cl->ball->velocity.x = 0.0f;
+			state.cl->ball->velocity.y = 0.0f;
 		}
 
 		if (!state.paused) {
-			l1.ball->centre.x +=
-				(l1.ball->velocity.x * l1.ball->direction.x);
-			l1.ball->centre.y +=
-				(l1.ball->velocity.y * l1.ball->direction.y);
+			state.cl->ball->centre.x +=
+				(state.cl->ball->velocity.x *
+				 state.cl->ball->direction.x);
+			state.cl->ball->centre.y +=
+				(state.cl->ball->velocity.y *
+				 state.cl->ball->direction.y);
 		}
 
 		// ----------------------------------------------
@@ -268,8 +381,10 @@ int main(void)
 		ClearBackground(BLACK);
 
 		DrawFPS(10, 10);
-		for (int row = 0; row < l1.blocks_state->num_blocks; ++row) {
-			Block current_block = l1.blocks_state->blocks[row];
+		for (int row = 0; row < state.cl->blocks_state->num_blocks;
+		     ++row) {
+			Block current_block =
+				state.cl->blocks_state->blocks[row];
 
 			if (current_block.alive) {
 				DrawRectangleRec(current_block.rec, RED);
@@ -295,9 +410,9 @@ int main(void)
 				 horizontal.color);
 		}
 
-		DrawRectangleRec(*l1.paddle, WHITE);
-		DrawCircle(l1.ball->centre.x, l1.ball->centre.y,
-			   l1.ball->radius, l1.ball->color);
+		DrawRectangleRec(*state.cl->paddle, WHITE);
+		DrawCircle(state.cl->ball->centre.x, state.cl->ball->centre.y,
+			   state.cl->ball->radius, state.cl->ball->color);
 
 		if (state.paused) {
 			DrawText(paused,
@@ -309,6 +424,13 @@ int main(void)
 
 			DrawText(title,
 				 screen_width / 2 -
+					 ((float)MeasureText(title,
+							     title_font_size) /
+					  2),
+				 screen_height / 7, title_font_size, GREEN);
+
+			DrawText(reset,
+				 screen_width - screen_width / 10 -
 					 ((float)MeasureText(title,
 							     title_font_size) /
 					  2),
