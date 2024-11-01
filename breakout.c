@@ -21,8 +21,8 @@
 	printf("x = %f y = %f\nwidth = %f height = %f alive = %d\n", \
 	       expand_rec(block.rec), block.alive)
 
-#define DrawRectangleLinesRec(rec, colour) \
-	DrawRectangleLines(rec.x, rec.y, rec.width, rec.height, colour)
+#define DrawRectangleLinesRec(rec, color) \
+	DrawRectangleLines(rec.x, rec.y, rec.width, rec.height, color)
 
 typedef struct {
 	int startPosX;
@@ -36,6 +36,8 @@ typedef struct {
 typedef struct {
 	Rectangle rec;
 	bool alive;
+	Color main_color;
+	Color outline_color;
 } Block;
 
 typedef struct {
@@ -129,6 +131,8 @@ void init_level_two(Level *level_two, State *state)
 					    .width = block_width,
 					    .height = block_height },
 			.alive = true,
+			.main_color = RED,
+			.outline_color = WHITE,
 		};
 
 		block_count++;
@@ -143,6 +147,8 @@ void init_level_two(Level *level_two, State *state)
 					    .width = block_width,
 					    .height = block_height },
 			.alive = true,
+			.main_color = YELLOW,
+			.outline_color = BLACK,
 		};
 
 		block_count++;
@@ -207,6 +213,8 @@ void init_level_one(Level *level_one, State *state)
 					    .width = block_width,
 					    .height = block_width / 2 },
 			.alive = true,
+			.main_color = RED,
+			.outline_color = WHITE,
 		};
 
 		block_count++;
@@ -318,7 +326,6 @@ int main(void)
 		if (IsKeyReleased(KEY_ENTER)) {
 			//currently levels can be changed without winning
 			//as a dev door to help testing
-
 			/* if (state.win) { */
 			state.level_no++;
 			char state_assert_msg[100] = { 0 };
@@ -411,8 +418,11 @@ int main(void)
 				state.cl->blocks_state->blocks[row];
 
 			if (current_block.alive) {
-				DrawRectangleRec(current_block.rec, RED);
-				DrawRectangleLinesRec(current_block.rec, WHITE);
+				DrawRectangleRec(current_block.rec,
+						 current_block.main_color);
+				DrawRectangleLinesRec(
+					current_block.rec,
+					current_block.outline_color);
 			}
 		}
 
