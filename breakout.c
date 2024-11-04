@@ -1,9 +1,11 @@
 #include "raylib.h"
+#include "raymath.h"
 #include <stdbool.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
 #define NUM_ROW 20
 #define RULER_INC 96
 #define MAX_LEVEL 2
@@ -229,6 +231,38 @@ void init_level_one(Level *level_one, State *state)
 			  .level_no = 0 };
 }
 
+bool CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec)
+{
+	bool collision = false;
+
+	float recCenterX = rec.x + rec.width / 2.0f;
+	float recCenterY = rec.y + rec.height / 2.0f;
+
+	float dx = fabsf(center.x - recCenterX);
+	float dy = fabsf(center.y - recCenterY);
+
+	if (dx > (rec.width / 2.0f + radius)) {
+		return false;
+	}
+	if (dy > (rec.height / 2.0f + radius)) {
+		return false;
+	}
+
+	if (dx <= (rec.width / 2.0f)) {
+		return true;
+	}
+	if (dy <= (rec.height / 2.0f)) {
+		return true;
+	}
+
+	float cornerDistanceSq =
+		(dx - rec.width / 2.0f) * (dx - rec.width / 2.0f) +
+		(dy - rec.height / 2.0f) * (dy - rec.height / 2.0f);
+
+	collision = (cornerDistanceSq <= (radius * radius));
+
+	return collision;
+}
 int main(void)
 {
 	char *title = "BREAKOUT";
