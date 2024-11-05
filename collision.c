@@ -1,27 +1,7 @@
-#include <stdio.h>
+#include "raylib.h"
+#include "types.h"
 #include <math.h>
-#include <stdbool.h>
-
-typedef struct Rectangle {
-	float x; // Rectangle top-left corner position x
-	float y; // Rectangle top-left corner position y
-	float width; // Rectangle width
-	float height; // Rectangle height
-} Rectangle;
-
-typedef struct Vector2 {
-	float x; // Vector x component
-	float y; // Vector y component
-} Vector2;
-
-typedef struct {
-	Vector2 centre;
-	Vector2 velocity;
-	Vector2 direction;
-
-	float radius;
-	/* Color color; */
-} Ball;
+#include <stdio.h>
 
 bool pointPoint(Vector2 point1, Vector2 point2)
 {
@@ -76,9 +56,71 @@ bool rect_rect(Rectangle r1, Rectangle r2)
 	return false;
 }
 
+void which_line(Ball c, Rectangle r, Line_id *line)
+{
+	// which edge is closest?
+	if (c.centre.x < r.x) { // left edge
+		line->testX = r.x;
+		line->d = LEFT;
+
+	} else if (c.centre.x > r.x + r.width) {
+		line->testX = r.x;
+		line->d = RIGHT; //right edge
+	}
+
+	if (c.centre.y < r.y) {
+		line->testY = r.y;
+		line->d = TOP; // top edge
+
+	} else if (c.centre.y > r.y + r.height) {
+		line->testY = r.y;
+		line->d = BOTTOM; // bottom edge
+	}
+}
+
+bool circle_paddle(Ball c, Paddle p)
+{
+	// Translate circle position to local space
+	Vector2 circle_pos = { c.centre.x - p.rec->x, c.centre.y - p.rec->y };
+
+	// Convert rotation to radians and negate for correct transform
+	float angle = -p.rotation * DEG2RAD;
+
+	// Transform circle position to paddle's rotated space using standard rotation matrix
+	Vector2 rotated_circle_pos = {
+		circle_pos.x * cosf(angle) - circle_pos.y * sinf(angle),
+		circle_pos.x * sinf(angle) + circle_pos.y * cosf(angle)
+	};
+
+	float testX = rotated_circle_pos.x;
+	float testY = rotated_circle_pos.y;
+
+	// Use half dimensions for testing against centered rectangle
+	float half_width = p.rec->width / 2; // Note: divided by 2 now
+	float half_height = p.rec->height / 2; // Note: divided by 2 now
+
+	// Find closest point on rectangle to circle center
+	if (testX < -half_width)
+		testX = -half_width; // test left edge
+	else if (testX > half_width)
+		testX = half_width; // right edge
+	if (testY < -half_height)
+		testY = -half_height; // top edge
+	else if (testY > half_height)
+		testY = half_height; // bottom edge
+
+	// Calculate squared distance from closest point
+	float distX = rotated_circle_pos.x - testX;
+	float distY = rotated_circle_pos.y - testY;
+	float distance = (distX * distX) + (distY * distY);
+
+	// Compare squared distance with squared radius
+	return distance <= (c.radius * c.radius);
+}
+
 bool circle_rect(Ball c, Rectangle r)
 {
-	// temporary variables to set edges for testing
+	/* Line_id line = which_line(c, r); */
 	float testX = c.centre.x;
 	float testY = c.centre.y;
 
@@ -169,11 +211,11 @@ bool line_circle(Vector2 l_start, Vector2 l_end, Ball c)
 	return false;
 }
 
-int main(void)
-{
-	Vector2 point1 = { 10.0f, 10.0f };
-	Vector2 point2 = { 40.0f, 50.0f };
+/* int main(void) */
+/* { */
+/* 	Vector2 point1 = { 10.0f, 10.0f }; */
+/* 	Vector2 point2 = { 40.0f, 50.0f }; */
 
-	float distance = dist(point1, point2);
-	printf("dist: %f", distance);
-}
+/* 	float distance = dist(point1, point2); */
+/* 	printf("dist: %f", distance); */
+/* } */
