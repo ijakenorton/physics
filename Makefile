@@ -8,7 +8,7 @@ SRC_DIR = ./src
 
 breakout: 
 	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) ./breakout.c  -o $(BIN_DIR)/breakout $(LIB_PATH) $(LIBS)
+	$(CC) $(CFLAGS) ./breakout.c ./collision.c  -o $(BIN_DIR)/breakout $(LIB_PATH) $(LIBS)
 
 run:
 	./bin/breakout

@@ -1,75 +1,8 @@
 #include "raylib.h"
-#include <stdbool.h>
-#include <assert.h>
+#include "types.h"
+#include "collision.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#define NUM_ROW 20
-#define RULER_INC 96
-#define MAX_LEVEL 2
-#define expand_vec2(vec) vec.x, vec.y
-#define expand_rec(rec) rec.x, rec.y, rec.width, rec.height
-#define print_int(val) printf(#val " = %d\n", val)
-#define print_rec(rec) \
-	printf("x = %f\ny = %f\nwidth = %f\nheight = %f\n", expand_rec(rec))
-#define print_ball(ball)                                                                                                            \
-	printf("centre.x = %f\ncentre.y = %f\nvelocity.x = %f\nvelocity.y = %f\ndirection.x = %f\ndirection.y = %f\nradius = %f\n", \
-	       expand_vec2(ball->centre), expand_vec2(ball->velocity),                                                              \
-	       expand_vec2(ball->direction), ball->radius)
-
-#define print_block(block)                                           \
-	printf("x = %f y = %f\nwidth = %f height = %f alive = %d\n", \
-	       expand_rec(block.rec), block.alive)
-
-#define DrawRectangleLinesRec(rec, color) \
-	DrawRectangleLines(rec.x, rec.y, rec.width, rec.height, color)
-
-typedef struct {
-	int startPosX;
-	int startPosY;
-	int endPosX;
-	int endPosY;
-
-	Color color;
-} Line;
-
-typedef struct {
-	Rectangle rec;
-	bool alive;
-	Color main_color;
-	Color outline_color;
-} Block;
-
-typedef struct {
-	Block *blocks;
-	int num_alive;
-	int num_blocks;
-} BlocksState;
-
-typedef struct {
-	Vector2 centre;
-	Vector2 velocity;
-	Vector2 direction;
-
-	float radius;
-	Color color;
-} Ball;
-
-typedef struct {
-	BlocksState *blocks_state;
-	Ball *ball;
-	Rectangle *paddle;
-} Level;
-
-typedef struct {
-	bool loss;
-	bool win;
-	bool paused;
-	Level *cl;
-	int level_no;
-} State;
-
-typedef void (*LevelFunc)(Level *level, State *state);
 
 float screen_width = 1920.0f / 2;
 float screen_height = 1080.0f / 2;
@@ -101,15 +34,20 @@ void init_level_two(Level *level_two, State *state)
 	};
 
 	if (level_two->paddle == NULL) {
-		level_two->paddle = malloc(sizeof(Rectangle));
+		level_two->paddle = malloc(sizeof(Paddle));
+		level_two->paddle->rec = malloc(sizeof(Rectangle));
+		level_two->paddle->origin = malloc(sizeof(Vector2));
 	}
 
 	float rec_width = screen_width / 5.0;
-	*level_two->paddle =
-		(Rectangle){ .x = screen_width / 2.0 - (rec_width / 2),
-			     .y = screen_height - 50.0,
-			     .width = rec_width,
-			     .height = 20.0 };
+	*level_two->paddle->rec = (Rectangle){ .x = screen_width / 2.0,
+					       .y = screen_height - 100.0,
+					       .width = rec_width,
+					       .height = 20.0 };
+	level_two->paddle->rotation = 0;
+	*level_two->paddle->origin =
+		(Vector2){ level_two->paddle->rec->width / 2.0f,
+			   level_two->paddle->rec->height / 2.0f };
 
 	float num_row = 10.0;
 	float block_width = screen_width / num_row;
@@ -175,8 +113,8 @@ void init_level_one(Level *level_one, State *state)
 	*level_one->ball = (Ball){
 		.centre.x = screen_width / 2.0,
 		.centre.y = screen_height - (screen_height / 4),
-		.velocity.x = 2.0,
-		.velocity.y = 4.0,
+		.velocity.x = 1.0,
+		.velocity.y = 2.0,
 		.direction.x = 1,
 		.direction.y = 1,
 		.radius = 20.0,
@@ -184,15 +122,20 @@ void init_level_one(Level *level_one, State *state)
 	};
 
 	if (level_one->paddle == NULL) {
-		level_one->paddle = malloc(sizeof(Rectangle));
+		level_one->paddle = malloc(sizeof(Paddle));
+		level_one->paddle->rec = malloc(sizeof(Rectangle));
+		level_one->paddle->origin = malloc(sizeof(Vector2));
 	}
 
 	float rec_width = screen_width / 5.0;
-	*level_one->paddle =
-		(Rectangle){ .x = screen_width / 2.0 - (rec_width / 2),
-			     .y = screen_height - 50.0,
-			     .width = rec_width,
-			     .height = 20.0 };
+	*level_one->paddle->rec = (Rectangle){ .x = screen_width / 2.0,
+					       .y = screen_height - 100.0,
+					       .width = rec_width,
+					       .height = 20.0 };
+	level_one->paddle->rotation = 0;
+	*level_one->paddle->origin =
+		(Vector2){ level_one->paddle->rec->width / 2.0f,
+			   level_one->paddle->rec->height / 2.0f };
 
 	float num_row = 10.0;
 	float block_width = screen_width / num_row;
@@ -295,16 +238,23 @@ int main(void)
 
 	int paused_cooldown = 1;
 	int initial_timer = 1;
+
 	while (!WindowShouldClose()) {
 		// update
 		// ------------------------------------------------
 		if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
-			state.cl->paddle->x += 10.0f;
+			state.cl->paddle->rec->x += 10.0f;
 		}
 		if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
-			state.cl->paddle->x -= 10.0f;
+			state.cl->paddle->rec->x -= 10.0f;
 		}
 
+		if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) {
+			state.cl->paddle->rotation += 1.0f;
+		}
+		if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) {
+			state.cl->paddle->rotation -= 1.0f;
+		}
 		// Bit of a hack to fix space being triggered multiple times
 		// Handles pause
 		if (IsKeyReleased(KEY_SPACE)) {
@@ -341,10 +291,6 @@ int main(void)
 			/* } */
 		}
 
-		paddle_collision = CheckCollisionCircleRec(
-			state.cl->ball->centre, state.cl->ball->radius,
-			*state.cl->paddle);
-
 		for (int i = 0; i < state.cl->blocks_state->num_blocks; ++i) {
 			Block current_block = state.cl->blocks_state->blocks[i];
 
@@ -352,9 +298,8 @@ int main(void)
 				continue;
 			}
 
-			block_collision = CheckCollisionCircleRec(
-				state.cl->ball->centre, state.cl->ball->radius,
-				current_block.rec);
+			block_collision =
+				circle_rect(*state.cl->ball, current_block.rec);
 
 			if (block_collision) {
 				state.cl->blocks_state->blocks[i].alive = false;
@@ -362,15 +307,38 @@ int main(void)
 				if (state.cl->blocks_state->num_alive == 0) {
 					state.win = true;
 				}
-				state.cl->ball->direction.y *= -1.0;
-				state.cl->ball->direction.x *= 1.0;
+				Line_id line = { 0 };
+				which_line(*state.cl->ball, current_block.rec,
+					   &line);
+				print_int(line.d);
+				switch (line.d) {
+				case TOP:
+					printf("top\n");
+					state.cl->ball->direction.y *= -1.0;
+					break;
+				case BOTTOM:
+					printf("bottom\n");
+					state.cl->ball->direction.y *= -1.0;
+					break;
+				case LEFT:
+					printf("left\n");
+					state.cl->ball->direction.x *= -1.0;
+					break;
+				case RIGHT:
+					printf("right\n");
+					state.cl->ball->direction.x *= -1.0;
+					break;
+				}
 
 				break;
 			}
 		}
 
+		paddle_collision =
+			circle_paddle(*state.cl->ball, *state.cl->paddle);
+
 		if (paddle_collision) {
-			state.cl->ball->direction.y *= -1.0;
+			state.cl->ball->direction.y = -1.0;
 		}
 
 		if ((state.cl->ball->centre.x >=
@@ -444,7 +412,10 @@ int main(void)
 				 horizontal.color);
 		}
 
-		DrawRectangleRec(*state.cl->paddle, WHITE);
+		DrawRectanglePro(*state.cl->paddle->rec,
+				 *state.cl->paddle->origin,
+				 state.cl->paddle->rotation, YELLOW);
+
 		DrawCircle(state.cl->ball->centre.x, state.cl->ball->centre.y,
 			   state.cl->ball->radius, state.cl->ball->color);
 
