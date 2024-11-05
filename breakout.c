@@ -3,9 +3,21 @@
 #include "collision.h"
 #include <stdio.h>
 #include <stdlib.h>
+#define ARENA_IMPLEMENTATION
+#include "arena.h"
 
 float screen_width = 1920.0f / 2;
 float screen_height = 1080.0f / 2;
+
+static Arena default_arena = { 0 };
+/* static Arena temporary_arena = { 0 }; */
+static Arena *context_arena = &default_arena;
+
+void *context_alloc(size_t size)
+{
+	assert(context_arena);
+	return arena_alloc(context_arena, size);
+}
 
 void assert_with_message(bool condition, char *message)
 {
@@ -19,7 +31,7 @@ void assert_with_message(bool condition, char *message)
 void init_level_two(Level *level_two, State *state)
 {
 	if (level_two->ball == NULL) {
-		level_two->ball = malloc(sizeof(Ball));
+		level_two->ball = context_alloc(sizeof(Ball));
 	}
 
 	*level_two->ball = (Ball){
@@ -34,9 +46,9 @@ void init_level_two(Level *level_two, State *state)
 	};
 
 	if (level_two->paddle == NULL) {
-		level_two->paddle = malloc(sizeof(Paddle));
-		level_two->paddle->rec = malloc(sizeof(Rectangle));
-		level_two->paddle->origin = malloc(sizeof(Vector2));
+		level_two->paddle = context_alloc(sizeof(Paddle));
+		level_two->paddle->rec = context_alloc(sizeof(Rectangle));
+		level_two->paddle->origin = context_alloc(sizeof(Vector2));
 	}
 
 	float rec_width = screen_width / 5.0;
@@ -54,9 +66,9 @@ void init_level_two(Level *level_two, State *state)
 	float block_height = block_width / 2;
 
 	if (level_two->blocks_state == NULL) {
-		level_two->blocks_state = malloc(sizeof(BlocksState));
+		level_two->blocks_state = context_alloc(sizeof(BlocksState));
 		level_two->blocks_state->blocks =
-			malloc(sizeof(Block) * NUM_ROW);
+			context_alloc(sizeof(Block) * NUM_ROW);
 	}
 
 	// init blocks
@@ -107,7 +119,7 @@ void init_level_two(Level *level_two, State *state)
 void init_level_one(Level *level_one, State *state)
 {
 	if (level_one->ball == NULL) {
-		level_one->ball = malloc(sizeof(Ball));
+		level_one->ball = context_alloc(sizeof(Ball));
 	}
 
 	*level_one->ball = (Ball){
@@ -122,9 +134,9 @@ void init_level_one(Level *level_one, State *state)
 	};
 
 	if (level_one->paddle == NULL) {
-		level_one->paddle = malloc(sizeof(Paddle));
-		level_one->paddle->rec = malloc(sizeof(Rectangle));
-		level_one->paddle->origin = malloc(sizeof(Vector2));
+		level_one->paddle = context_alloc(sizeof(Paddle));
+		level_one->paddle->rec = context_alloc(sizeof(Rectangle));
+		level_one->paddle->origin = context_alloc(sizeof(Vector2));
 	}
 
 	float rec_width = screen_width / 5.0;
@@ -141,9 +153,9 @@ void init_level_one(Level *level_one, State *state)
 	float block_width = screen_width / num_row;
 
 	if (level_one->blocks_state == NULL) {
-		level_one->blocks_state = malloc(sizeof(BlocksState));
+		level_one->blocks_state = context_alloc(sizeof(BlocksState));
 		level_one->blocks_state->blocks =
-			malloc(sizeof(Block) * NUM_ROW);
+			context_alloc(sizeof(Block) * NUM_ROW);
 	}
 
 	// init blocks
@@ -221,7 +233,7 @@ int main(void)
 	State state = { 0 };
 	LevelFunc levels[2] = { 0 };
 
-	state.cl = malloc(sizeof(Level));
+	state.cl = context_alloc(sizeof(Level));
 	state.cl->blocks_state = NULL;
 	state.cl->ball = NULL;
 	state.cl->paddle = NULL;
@@ -462,6 +474,7 @@ int main(void)
 	}
 
 	CloseWindow();
+	arena_free(&default_arena);
 
 	return 0;
 }
