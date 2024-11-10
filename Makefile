@@ -8,10 +8,10 @@ SRC_DIR = ./src
 
 breakout: 
 	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) ./breakout.c ./collision.c  -o $(BIN_DIR)/breakout $(LIB_PATH) $(LIBS)
+	$(CC) $(CFLAGS) ./physics.c ./collision.c  -o $(BIN_DIR)/physics $(LIB_PATH) $(LIBS)
 
 run:
-	./bin/breakout
+	./bin/physics
 
 clean:
 	rm -rf $(BIN_DIR)

@@ -16,6 +16,8 @@
 #define expand_rec(rec) rec.x, rec.y, rec.width, rec.height
 #define print_int(val) printf(#val " = %d\n", val)
 #define print_float(val) printf(#val " = %f\n", val)
+#define print_float_v2(val) printf(#val "\n.x = %f\n.y = %f\n", expand_vec2(val))
+#define print_line(line) printf(#line "\nstart.x = %f\nstart.y = %f\nend.x = %f\nend.y = %f\n", expand_vec2(line.start), expand_vec2(line.end))
 #define print_rec(rec) \
 	printf("x = %f\ny = %f\nwidth = %f\nheight = %f\n", expand_rec(rec))
 #define print_ball(ball)                                                                                                            \
@@ -31,11 +33,15 @@
 	DrawRectangleLines(rec.x, rec.y, rec.width, rec.height, color)
 
 typedef struct {
-	int startPosX;
-	int startPosY;
-	int endPosX;
-	int endPosY;
+	float x1;
+	float y1;
+	float x2;
+	float y2;
+} Translation_Matrix;
 
+typedef struct {
+	Vector2 start;
+	Vector2 end;
 	Color color;
 } Line;
 
