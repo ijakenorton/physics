@@ -78,6 +78,7 @@ Line_ptr *l_clone(Line_ptr *line, Arena *arena)
 	Line_ptr *new = temp_alloc(arena, sizeof(Line_ptr));
 	new->start = v_clone(*line->start, arena);
 	new->end = v_clone(*line->end, arena);
+	new->color = line->color;
 	return new;
 }
 
@@ -86,6 +87,7 @@ Line_ptr *l_clone_def(Line_ptr *line)
 	Line_ptr *new = context_alloc(sizeof(Line_ptr));
 	new->start = v_clone_def(*line->start);
 	new->end = v_clone_def(*line->end);
+	new->color = line->color;
 	return new;
 }
 
@@ -153,6 +155,10 @@ void GameLoop()
 		(T_Matrix){ .x1 = 0.0f, .y1 = 1.0f, .x2 = -1.0f, .y2 = 0.0f };
 	Line_ptr *transform_origin =
 		l_world_to_screen(l_transform(origin_along_x, rotation_m));
+
+	print_color(transform_origin->color);
+	print_color(t_origin->color);
+
 	transform_origin->color = YELLOW;
 
 	t_origin->color = WHITE;

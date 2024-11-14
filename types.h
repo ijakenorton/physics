@@ -31,8 +31,7 @@
 	printf("x = %f\ny = %f\nwidth = %f\nheight = %f\n", expand_rec(rec))
 #define print_ball(ball)                                                                                                            \
 	printf("centre.x = %f\ncentre.y = %f\nvelocity.x = %f\nvelocity.y = %f\ndirection.x = %f\ndirection.y = %f\nradius = %f\n", \
-	       expand_vec2(ball->centre), expand_vec2(ball->velocity),                                                              \
-	       expand_vec2(ball->direction), ball->radius)
+	       expand_vec2(ball->centre), expand_vec2(ball->velocity),
 
 #define print_block(block)                                           \
 	printf("x = %f y = %f\nwidth = %f height = %f alive = %d\n", \
@@ -40,6 +39,11 @@
 
 #define DrawRectangleLinesRec(rec, color) \
 	DrawRectangleLines(rec.x, rec.y, rec.width, rec.height, color)
+
+#define expand_color(color) color.r, color.g, color.b, color.a
+#define expand_color_p(color) color->r, color->g, color->b, color->a
+#define print_color(color) \
+	printf(#color "= { %u, %u, %u, %u }\n", expand_color(color))
 
 typedef struct {
 	float x1;

@@ -83,7 +83,7 @@ void line_screen_to_world(Line *new_l,Line *old_l)
 }
 
 
-Line_t line_screen_to_world_v(Line_t old_l, Translation_Matrix m)
+Line_t line_screen_to_world_v(Line_t old_l, T_Matrix m)
 {
         Line_t l = context_alloc(sizeof(Line_t));
         l->start = vec2_linear_translate(*old_l->start, m);
@@ -93,14 +93,14 @@ Line_t line_screen_to_world_v(Line_t old_l, Translation_Matrix m)
 }
 
 
-void vec2_linear_translate_old(Vector2 *new_v, Vector2 *old_v, Translation_Matrix m)
+void vec2_linear_translate_old(Vector2 *new_v, Vector2 *old_v, T_Matrix m)
 {
         new_v->x = (m.x1 * old_v->x) + (m.x2 * old_v->x);
         new_v->y = (m.y1 * old_v->y) + (m.y2 * old_v->y);
 }
 
 
-Vector2 *vec2_linear_translate(Vector2 v, Translation_Matrix m)
+Vector2 *vec2_linear_translate(Vector2 v, T_Matrix m)
 {
         Vector2 *new = context_alloc(sizeof(Vector2));
         new->x = (m.x1 * v.x) + (m.x2 * v.x);
@@ -108,7 +108,7 @@ Vector2 *vec2_linear_translate(Vector2 v, Translation_Matrix m)
         return new;
 }
 
-Line_t vec2_linear_translate_line(Line_t old_l, Translation_Matrix m)
+Line_t vec2_linear_translate_line(Line_t old_l, T_Matrix m)
 {
         Line_t l = context_alloc(sizeof(Line_t));
         l->start = vec2_linear_translate(*old_l->start, m);
@@ -191,7 +191,7 @@ int main(void)
                 temp_l->color = BLUE;
 
 		rotated_y_lines[i] = temp_l;
-		rotated_y_lines[i] = vec2_linear_translate_line(temp_l, (Translation_Matrix){.x1 = 0.0f, .y1 = 1.0f, .x2 = -1.0f, .y2 = 0.0f});
+		rotated_y_lines[i] = vec2_linear_translate_line(temp_l, (T_Matrix){.x1 = 0.0f, .y1 = 1.0f, .x2 = -1.0f, .y2 = 0.0f});
                 print_line_t(rotated_y_lines[i]);
 	}
 
