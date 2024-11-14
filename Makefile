@@ -8,10 +8,17 @@ SRC_DIR = ./src
 
 breakout: 
 	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) ./physics.c ./collision.c  -o $(BIN_DIR)/physics $(LIB_PATH) $(LIBS)
+	$(CC) $(CFLAGS) ./engine.c ./collision.c  -o $(BIN_DIR)/engine $(LIB_PATH) $(LIBS)
 
 run:
-	./bin/physics
+	./bin/engine
+
+# breakout: 
+# 	mkdir -p $(BIN_DIR)
+# 	$(CC) $(CFLAGS) ./physics.c ./collision.c  -o $(BIN_DIR)/physics $(LIB_PATH) $(LIBS)
+
+# run:
+# 	./bin/physics
 
 clean:
 	rm -rf $(BIN_DIR)

@@ -13,11 +13,20 @@
 #define RULER_INC 96
 #define MAX_LEVEL 2
 #define expand_vec2(vec) vec.x, vec.y
+#define expand_vec2_p(vec) vec->x, vec->y
 #define expand_rec(rec) rec.x, rec.y, rec.width, rec.height
 #define print_int(val) printf(#val " = %d\n", val)
 #define print_float(val) printf(#val " = %f\n", val)
-#define print_float_v2(val) printf(#val "\n.x = %f\n.y = %f\n", expand_vec2(val))
-#define print_line(line) printf(#line "\nstart.x = %f\nstart.y = %f\nend.x = %f\nend.y = %f\n", expand_vec2(line.start), expand_vec2(line.end))
+#define print_float_v2(val) \
+	printf(#val "\n.x = %f\n.y = %f\n", expand_vec2(val))
+#define print_v2_p(val) printf(#val "\n.x = %f\n.y = %f\n", expand_vec2_p(val))
+#define print_line(line)                                                       \
+	printf(#line "\nstart.x = %f\nstart.y = %f\nend.x = %f\nend.y = %f\n", \
+	       expand_vec2(line.start), expand_vec2(line.end))
+#define print_line_t(line)                                                   \
+	printf(#line                                                         \
+	       "\nstart->x = %f\nstart->y = %f\nend->x = %f\nend->y = %f\n", \
+	       line->start->x, line->start->y, line->end->x, line->end->y)
 #define print_rec(rec) \
 	printf("x = %f\ny = %f\nwidth = %f\nheight = %f\n", expand_rec(rec))
 #define print_ball(ball)                                                                                                            \
@@ -37,13 +46,19 @@ typedef struct {
 	float y1;
 	float x2;
 	float y2;
-} Translation_Matrix;
+} T_Matrix;
 
 typedef struct {
 	Vector2 start;
 	Vector2 end;
 	Color color;
 } Line;
+
+typedef struct {
+	Vector2 *start;
+	Vector2 *end;
+	Color color;
+} *Line_t;
 
 typedef struct {
 	Rectangle rec;
