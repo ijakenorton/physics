@@ -16,6 +16,7 @@
 #define expand_vec2_p(vec) vec->x, vec->y
 #define expand_rec(rec) rec.x, rec.y, rec.width, rec.height
 #define print_int(val) printf(#val " = %d\n", val)
+#define print_zu(val) printf(#val " = %zu\n", val)
 #define print_float(val) printf(#val " = %f\n", val)
 #define print_float_v2(val) \
 	printf(#val "\n.x = %f\n.y = %f\n", expand_vec2(val))

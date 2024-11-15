@@ -99,6 +99,14 @@ Vector2 *v_translate(Vector2 old, Vector2 offset)
 	return v;
 }
 
+Vector2 *v_mul(Vector2 old, float scalar)
+{
+	Vector2 *v = v_clone_def(old);
+	v->x *= scalar;
+	v->y *= scalar;
+	return v;
+}
+
 Line_ptr *l_translate(Line_ptr *line, Vector2 offset)
 {
 	Line_ptr *translated = l_clone_def(line);
@@ -110,8 +118,9 @@ Line_ptr *l_translate(Line_ptr *line, Vector2 offset)
 Vector2 *v_transform(Vector2 v, T_Matrix m)
 {
 	Vector2 *new = temp_alloc(&default_arena, sizeof(Vector2));
-	new->x = (m.x1 * v.x) + (m.x2 * v.x);
-	new->y = (m.y1 * v.y) + (m.y2 * v.y);
+	new->x = (m.x1 * v.x) + (m.x2 * v.y);
+	new->y = (m.y1 * v.x) + (m.y2 * v.y);
+
 	return new;
 }
 
@@ -123,11 +132,29 @@ Line_ptr *l_transform(Line_ptr *line, T_Matrix m)
 	return translated;
 }
 
+Line_ptr *l_transform_deg(Line_ptr *line, float deg)
+{
+	T_Matrix m;
+	m.x1 = cosf(DEG2RAD * deg);
+	m.y1 = -sinf(DEG2RAD * deg);
+	m.x2 = sinf(DEG2RAD * deg);
+	m.y2 = cosf(DEG2RAD * deg);
+
+	Line_ptr *translated = l_clone_def(line);
+	translated->start = v_transform(*line->start, m);
+	translated->end = v_transform(*line->end, m);
+	return translated;
+}
+
 Line_ptr *l_world_to_screen(Line_ptr *line)
 {
 	return l_translate(line, centre);
 }
 
+Line_ptr *l_screen_to_world(Line_ptr *line)
+{
+	return l_translate(line, *v_mul(centre, -1.0f));
+}
 void assert_with_message(bool condition, char *message)
 {
 	print_int(condition);
@@ -152,20 +179,33 @@ void GameLoop()
 
 	Line_ptr *t_origin = l_translate(origin_along_x, centre);
 	T_Matrix rotation_m =
-		(T_Matrix){ .x1 = 0.0f, .y1 = 1.0f, .x2 = -1.0f, .y2 = 0.0f };
+		(T_Matrix){ .x1 = (0.0f), .y1 = 1.0f, .x2 = -1.0f, .y2 = 0.0f };
 	Line_ptr *transform_origin =
 		l_world_to_screen(l_transform(origin_along_x, rotation_m));
+	Line_ptr *t2_origin = l_world_to_screen(
+		l_transform(l_screen_to_world(transform_origin), rotation_m));
+	Line_ptr *t3_origin = l_world_to_screen(
+		l_transform(l_screen_to_world(t2_origin), rotation_m));
+	Line_ptr *custom_deg =
+		l_world_to_screen(l_transform_deg(origin_along_x, 0.0f));
+	Line_ptr *ninety_deg =
+		l_world_to_screen(l_transform_deg(origin_along_x, 90.0f));
+	Line_ptr *one_eighty_deg =
+		l_world_to_screen(l_transform_deg(origin_along_x, 180.0f));
 
-	print_color(transform_origin->color);
-	print_color(t_origin->color);
+	Line_ptr *two_fourty_deg =
+		l_world_to_screen(l_transform_deg(origin_along_x, 240.0f));
+	ninety_deg->color = RED;
+	one_eighty_deg->color = BLUE;
+	two_fourty_deg->color = GREEN;
 
-	transform_origin->color = YELLOW;
+	/* print_color(transform_origin->color); */
+	/* print_color(t_origin->color); */
 
-	t_origin->color = WHITE;
-
-	print_line_t(origin_along_x);
-	print_line_t(t_origin);
-	print_line_t(transform_origin);
+	/* print_line_t(origin_along_x); */
+	/* print_line_t(t_origin); */
+	/* print_line_t(transform_origin); */
+	/* print_line_t(t2_origin); */
 
 	InitWindow((int)WIDTH, (int)HEIGHT, "Physics Sandbox");
 
@@ -173,11 +213,28 @@ void GameLoop()
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		DrawLineLine(horizontal);
-		DrawLineLine(vertical);
-		DrawLineLine(origin_along_x);
-		DrawLineLine(t_origin);
-		DrawLineLine(transform_origin);
+		/* DrawLineLine(horizontal); */
+		/* DrawLineLine(vertical); */
+		/* DrawLineLine(origin_along_x); */
+		/* DrawLineLine(t_origin); */
+		/* DrawLineLine(transform_origin); */
+		/* DrawLineLine(t2_origin); */
+		/* DrawLineLine(t3_origin); */
+		custom_deg = l_world_to_screen(
+			l_transform_deg(l_screen_to_world(custom_deg), 1.0f));
+
+		ninety_deg = l_world_to_screen(
+			l_transform_deg(l_screen_to_world(ninety_deg), 1.0f));
+
+		one_eighty_deg = l_world_to_screen(l_transform_deg(
+			l_screen_to_world(one_eighty_deg), 1.0f));
+		two_fourty_deg = l_world_to_screen(l_transform_deg(
+			l_screen_to_world(two_fourty_deg), 1.0f));
+
+		DrawLineLine(custom_deg);
+		DrawLineLine(ninety_deg);
+		DrawLineLine(one_eighty_deg);
+		DrawLineLine(two_fourty_deg);
 
 		EndDrawing();
 	}
@@ -188,17 +245,4 @@ void GameLoop()
 int main(void)
 {
 	GameLoop();
-
-	/* Vector2 *v = temp_alloc(&temporary_arena, sizeof(Vector2 *)); */
-	/* *v = origin; */
-	/* Vector2 *cl = l_clone_def(v); */
-	/* cl->x = 10.0f; */
-	/* cl->y = 10.0f; */
-
-	/* print_float_v2(origin); */
-	/* print_v2_p(v); */
-	/* print_v2_p(cl); */
-	/* print_v2_p(v); */
-
-	/* printf("hello world\n"); */
 }
