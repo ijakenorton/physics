@@ -13,8 +13,10 @@
 #define Y_ORIGIN (0.0f)
 #define WIDTH (1080.0f)
 #define HEIGHT (1080.0f)
+#define lines_length 100
+#define colors_length 10
 
-#define DrawLineLine(line) DrawLineV(*line->start, *line->end, line->color)
+#define DrawLineLine(line) DrawLineV(line->start, line->end, line->color)
 Vector2 origin = { X_ORIGIN, Y_ORIGIN };
 Vector2 centre = { WIDTH / 2.0f, HEIGHT / 2.0f };
 
@@ -36,99 +38,78 @@ void *temp_alloc(Arena *temp, size_t size)
 	return new;
 }
 
-Vector2 *v_clone(Vector2 vec, Arena *arena)
-{
-	Vector2 *new = temp_alloc(arena, sizeof(Vector2));
-	new->x = vec.x;
-	new->y = vec.y;
-	return new;
-}
-
-Vector2 *v_clone_def(Vector2 vec)
-{
-	return v_clone(vec, &default_arena);
-}
-
 typedef struct {
-	Vector2 *start;
-	Vector2 *end;
+	Vector2 start;
+	Vector2 end;
 	Color color;
 } Line_ptr;
+
+// Vector operations now return values instead of pointers
+Vector2 v_translate(Vector2 old, Vector2 offset)
+{
+	Vector2 v;
+	v.x = old.x + offset.x;
+	v.y = old.y + offset.y;
+	return v;
+}
+
+Vector2 v_mul(Vector2 old, float scalar)
+{
+	Vector2 v;
+	v.x = old.x * scalar;
+	v.y = old.y * scalar;
+	return v;
+}
+
+Vector2 v_transform(Vector2 v, T_Matrix m)
+{
+	Vector2 new;
+	new.x = (m.x1 * v.x) + (m.x2 * v.y);
+	new.y = (m.y1 * v.x) + (m.y2 * v.y);
+	return new;
+}
 
 Line_ptr *l_init(Vector2 start, Vector2 end, Color color, Arena *arena)
 {
 	Line_ptr *new = temp_alloc(arena, sizeof(Line_ptr));
-	new->start = v_clone(start, arena);
-	new->end = v_clone(end, arena);
+	new->start = start;
+	new->end = end;
 	new->color = color;
 	return new;
 }
 
 Line_ptr *l_init_def(Vector2 start, Vector2 end, Color color)
 {
-	Line_ptr *new = temp_alloc(&default_arena, sizeof(Line_ptr));
-	new->start = v_clone_def(start);
-	new->end = v_clone_def(end);
-	new->color = color;
-	return new;
+	return l_init(start, end, color, &default_arena);
 }
 
 Line_ptr *l_clone(Line_ptr *line, Arena *arena)
 {
 	Line_ptr *new = temp_alloc(arena, sizeof(Line_ptr));
-	new->start = v_clone(*line->start, arena);
-	new->end = v_clone(*line->end, arena);
+	new->start = line->start;
+	new->end = line->end;
 	new->color = line->color;
 	return new;
 }
 
 Line_ptr *l_clone_def(Line_ptr *line)
 {
-	Line_ptr *new = context_alloc(sizeof(Line_ptr));
-	new->start = v_clone_def(*line->start);
-	new->end = v_clone_def(*line->end);
-	new->color = line->color;
-	return new;
-}
-
-Vector2 *v_translate(Vector2 old, Vector2 offset)
-{
-	Vector2 *v = v_clone_def(old);
-	v->x += offset.x;
-	v->y += offset.y;
-	return v;
-}
-
-Vector2 *v_mul(Vector2 old, float scalar)
-{
-	Vector2 *v = v_clone_def(old);
-	v->x *= scalar;
-	v->y *= scalar;
-	return v;
+	return l_clone(line, &default_arena);
 }
 
 Line_ptr *l_translate(Line_ptr *line, Vector2 offset)
 {
 	Line_ptr *translated = l_clone_def(line);
-	translated->start = v_translate(*line->start, offset);
-	translated->end = v_translate(*line->end, offset);
+	translated->start = v_translate(line->start, offset);
+	translated->end = v_translate(line->end, offset);
 	return translated;
-}
-
-Vector2 *v_transform(Vector2 v, T_Matrix m)
-{
-	Vector2 *new = temp_alloc(&default_arena, sizeof(Vector2));
-	new->x = (m.x1 * v.x) + (m.x2 * v.y);
-	new->y = (m.y1 * v.x) + (m.y2 * v.y);
-
-	return new;
 }
 
 Line_ptr *l_transform(Line_ptr *line, T_Matrix m)
 {
 	Line_ptr *translated = l_clone_def(line);
-	translated->start = v_transform(*line->start, m);
-	translated->end = v_transform(*line->end, m);
+	translated->start = v_transform(line->start, m);
+	translated->end = v_transform(line->end, m);
 	return translated;
 }
 
@@ -141,8 +122,8 @@ Line_ptr *l_transform_deg(Line_ptr *line, float deg)
 	m.y2 = cosf(DEG2RAD * deg);
 
 	Line_ptr *translated = l_clone_def(line);
-	translated->start = v_transform(*line->start, m);
-	translated->end = v_transform(*line->end, m);
+	translated->start = v_transform(line->start, m);
+	translated->end = v_transform(line->end, m);
 	return translated;
 }
 
@@ -153,8 +134,49 @@ Line_ptr *l_world_to_screen(Line_ptr *line)
 
 Line_ptr *l_screen_to_world(Line_ptr *line)
 {
-	return l_translate(line, *v_mul(centre, -1.0f));
+	return l_translate(line, v_mul(centre, -1.0f));
 }
+
+void v_translate_mut(Vector2 *v, Vector2 offset)
+{
+	v->x += offset.x;
+	v->y += offset.y;
+}
+
+void v_transform_mut(Vector2 *v, T_Matrix m)
+{
+	v->x = (m.x1 * v->x) + (m.x2 * v->y);
+	v->y = (m.y1 * v->x) + (m.y2 * v->y);
+}
+
+void l_translate_mut(Line_ptr *line, Vector2 offset)
+{
+	v_translate_mut(&line->start, offset);
+	v_translate_mut(&line->end, offset);
+}
+
+void l_world_to_screen_mut(Line_ptr *line)
+{
+	l_translate_mut(line, centre);
+}
+
+void l_screen_to_world_mut(Line_ptr *line)
+{
+	l_translate_mut(line, v_mul(centre, -1.0f));
+}
+
+void l_transform_deg_mut(Line_ptr *line, float deg)
+{
+	T_Matrix m;
+	m.x1 = cosf(DEG2RAD * deg);
+	m.y1 = -sinf(DEG2RAD * deg);
+	m.x2 = sinf(DEG2RAD * deg);
+	m.y2 = cosf(DEG2RAD * deg);
+
+	v_transform_mut(&line->start, m);
+	v_transform_mut(&line->end, m);
+}
+
 void assert_with_message(bool condition, char *message)
 {
 	print_int(condition);
@@ -175,7 +197,7 @@ void GameLoop()
 
 	Line_ptr *origin_along_x =
 		l_init_def((Vector2){ 50.0f, 50.0f },
-			   (Vector2){ 100.0f, Y_ORIGIN + 50.0f }, YELLOW);
+			   (Vector2){ 200.0f, Y_ORIGIN + 100.0f }, YELLOW);
 
 	Line_ptr *t_origin = l_translate(origin_along_x, centre);
 	T_Matrix rotation_m =
@@ -199,6 +221,21 @@ void GameLoop()
 	one_eighty_deg->color = BLUE;
 	two_fourty_deg->color = GREEN;
 
+	Line_ptr *rotating_lines[lines_length] = { 0 };
+	float angle = 3.6f;
+	float l_angle = 0.0f;
+
+	Color colors[colors_length] = {
+		LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD,
+		ORANGE,	   PINK, RED,	   MAROON, GREEN,
+	};
+	for (size_t line = 0; line < lines_length; ++line) {
+		rotating_lines[line] = l_world_to_screen(
+			l_transform_deg(origin_along_x, l_angle));
+		rotating_lines[line]->color = colors[line % 10];
+		l_angle += angle;
+	}
+
 	/* print_color(transform_origin->color); */
 	/* print_color(t_origin->color); */
 
@@ -208,10 +245,21 @@ void GameLoop()
 	/* print_line_t(t2_origin); */
 
 	InitWindow((int)WIDTH, (int)HEIGHT, "Physics Sandbox");
+	SetTargetFPS(60);
 
 	while (!WindowShouldClose()) {
+		for (int line = 0; line < lines_length; ++line) {
+			l_screen_to_world_mut(rotating_lines[line]);
+			l_transform_deg_mut(rotating_lines[line], angle);
+			l_world_to_screen_mut(rotating_lines[line]);
+		}
+
 		BeginDrawing();
 		ClearBackground(BLACK);
+
+		for (int line = 0; line < lines_length; ++line) {
+			DrawLineLine(rotating_lines[line]);
+		}
 
 		/* DrawLineLine(horizontal); */
 		/* DrawLineLine(vertical); */
@@ -220,22 +268,10 @@ void GameLoop()
 		/* DrawLineLine(transform_origin); */
 		/* DrawLineLine(t2_origin); */
 		/* DrawLineLine(t3_origin); */
-		custom_deg = l_world_to_screen(
-			l_transform_deg(l_screen_to_world(custom_deg), 1.0f));
-
-		ninety_deg = l_world_to_screen(
-			l_transform_deg(l_screen_to_world(ninety_deg), 1.0f));
-
-		one_eighty_deg = l_world_to_screen(l_transform_deg(
-			l_screen_to_world(one_eighty_deg), 1.0f));
-		two_fourty_deg = l_world_to_screen(l_transform_deg(
-			l_screen_to_world(two_fourty_deg), 1.0f));
-
-		DrawLineLine(custom_deg);
-		DrawLineLine(ninety_deg);
-		DrawLineLine(one_eighty_deg);
-		DrawLineLine(two_fourty_deg);
-
+		/* DrawLineLine(custom_deg); */
+		/* DrawLineLine(ninety_deg); */
+		/* DrawLineLine(one_eighty_deg); */
+		/* DrawLineLine(two_fourty_deg); */
 		EndDrawing();
 	}
 

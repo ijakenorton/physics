@@ -27,7 +27,7 @@
 #define print_line_t(line)                                                   \
 	printf(#line                                                         \
 	       "\nstart->x = %f\nstart->y = %f\nend->x = %f\nend->y = %f\n", \
-	       line->start->x, line->start->y, line->end->x, line->end->y)
+	       line->start.x, line->start.y, line->end.x, line->end.y)
 #define print_rec(rec) \
 	printf("x = %f\ny = %f\nwidth = %f\nheight = %f\n", expand_rec(rec))
 #define print_ball(ball)                                                                                                            \
