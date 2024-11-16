@@ -165,7 +165,20 @@ void l_screen_to_world_mut(Line_ptr *line)
 	l_translate_mut(line, v_mul(centre, -1.0f));
 }
 
-void l_transform_deg_mut(Line_ptr *line, float deg)
+float normalize_line_length(Line_ptr *line, float target_length)
+{
+	Vector2 diff = { line->end.x - line->start.x,
+			 line->end.y - line->start.y };
+	float current_length = sqrtf(diff.x * diff.x + diff.y * diff.y);
+	float scale = target_length / current_length;
+
+	// Keep start point fixed, scale end point
+	line->end.x = line->start.x + (diff.x * scale);
+	line->end.y = line->start.y + (diff.y * scale);
+	return current_length;
+}
+
+void l_transform_deg_mut(Line_ptr *line, float deg, float original_length)
 {
 	T_Matrix m;
 	m.x1 = cosf(DEG2RAD * deg);
@@ -175,6 +188,12 @@ void l_transform_deg_mut(Line_ptr *line, float deg)
 
 	v_transform_mut(&line->start, m);
 	v_transform_mut(&line->end, m);
+	normalize_line_length(line, original_length);
+}
+
+bool color_equals(Color a, Color b)
+{
+	return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
 }
 
 void assert_with_message(bool condition, char *message)
@@ -197,29 +216,7 @@ void GameLoop()
 
 	Line_ptr *origin_along_x =
 		l_init_def((Vector2){ 50.0f, 50.0f },
-			   (Vector2){ 200.0f, Y_ORIGIN + 100.0f }, YELLOW);
-
-	Line_ptr *t_origin = l_translate(origin_along_x, centre);
-	T_Matrix rotation_m =
-		(T_Matrix){ .x1 = (0.0f), .y1 = 1.0f, .x2 = -1.0f, .y2 = 0.0f };
-	Line_ptr *transform_origin =
-		l_world_to_screen(l_transform(origin_along_x, rotation_m));
-	Line_ptr *t2_origin = l_world_to_screen(
-		l_transform(l_screen_to_world(transform_origin), rotation_m));
-	Line_ptr *t3_origin = l_world_to_screen(
-		l_transform(l_screen_to_world(t2_origin), rotation_m));
-	Line_ptr *custom_deg =
-		l_world_to_screen(l_transform_deg(origin_along_x, 0.0f));
-	Line_ptr *ninety_deg =
-		l_world_to_screen(l_transform_deg(origin_along_x, 90.0f));
-	Line_ptr *one_eighty_deg =
-		l_world_to_screen(l_transform_deg(origin_along_x, 180.0f));
-
-	Line_ptr *two_fourty_deg =
-		l_world_to_screen(l_transform_deg(origin_along_x, 240.0f));
-	ninety_deg->color = RED;
-	one_eighty_deg->color = BLUE;
-	two_fourty_deg->color = GREEN;
+			   (Vector2){ 800.0f, Y_ORIGIN + 400.0f }, YELLOW);
 
 	Line_ptr *rotating_lines[lines_length] = { 0 };
 	float angle = 3.6f;
@@ -232,26 +229,138 @@ void GameLoop()
 	for (size_t line = 0; line < lines_length; ++line) {
 		rotating_lines[line] = l_world_to_screen(
 			l_transform_deg(origin_along_x, l_angle));
-		rotating_lines[line]->color = colors[line % 10];
+		/* rotating_lines[line]->color = colors[line % 2]; */
+		rotating_lines[line]->color = line % 2 == 0 ? BLUE : GREEN;
 		l_angle += angle;
 	}
-
-	/* print_color(transform_origin->color); */
-	/* print_color(t_origin->color); */
-
-	/* print_line_t(origin_along_x); */
-	/* print_line_t(t_origin); */
-	/* print_line_t(transform_origin); */
-	/* print_line_t(t2_origin); */
 
 	InitWindow((int)WIDTH, (int)HEIGHT, "Physics Sandbox");
 	SetTargetFPS(60);
 
+	bool r_up = false;
+	bool g_up = false;
+	bool b_up = false;
+	bool decreasing = true;
+
+	float original_length = sqrtf(
+		powf(rotating_lines[0]->end.x - rotating_lines[0]->start.x, 2) +
+		powf(rotating_lines[0]->end.y - rotating_lines[0]->start.y, 2));
+
+	const float max_length = 800.0f;
+	print_float(max_length);
+
 	while (!WindowShouldClose()) {
 		for (int line = 0; line < lines_length; ++line) {
+			original_length = sqrtf(
+				powf(rotating_lines[line]->end.x -
+					     rotating_lines[line]->start.x,
+				     2) +
+				powf(rotating_lines[line]->end.y -
+					     rotating_lines[line]->start.y,
+				     2));
+			if (decreasing) {
+				rotating_lines[line]->color =
+					color_equals(
+						rotating_lines[line]->color,
+						GREEN) ?
+						BLUE :
+						GREEN;
+				if (original_length - angle <= 5.0f) {
+					decreasing = false;
+					original_length += angle;
+				}
+				original_length -= angle;
+
+			} else {
+				rotating_lines[line]->color =
+					color_equals(
+						rotating_lines[line]->color,
+						BLUE) ?
+						YELLOW :
+						RED;
+
+				if (original_length + angle >= max_length) {
+					decreasing = true;
+					original_length -= angle;
+				}
+				original_length += angle;
+			}
+
 			l_screen_to_world_mut(rotating_lines[line]);
-			l_transform_deg_mut(rotating_lines[line], angle);
+			l_transform_deg_mut(rotating_lines[line], angle,
+					    original_length);
 			l_world_to_screen_mut(rotating_lines[line]);
+
+			/* if (r_up) { */
+			/* 	if (rotating_lines[line]->color.r + */
+			/* 		    (char)BLUE.r > */
+			/* 	    255) { */
+			/* 		r_up = false; */
+			/* 		rotating_lines[line]->color.r -= */
+			/* 			(char)(BLUE.r); */
+			/* 	} */
+			/* 	rotating_lines[line]->color.r += (char)(BLUE.r); */
+
+			/* } else { */
+			/* 	if (rotating_lines[line]->color.r - */
+			/* 			    (char)BLUE.r < */
+			/* 		    0 || */
+			/* 	    rotating_lines[line]->color.r - */
+			/* 			    (char)BLUE.r > */
+			/* 		    rotating_lines[line]->color.r) { */
+			/* 		r_up = true; */
+			/* 		rotating_lines[line]->color.r += */
+			/* 			(char)(BLUE.r); */
+			/* 	} */
+			/* 	rotating_lines[line]->color.r += (char)(BLUE.r); */
+			/* } */
+			/* if (g_up) { */
+			/* 	if (rotating_lines[line]->color.g + */
+			/* 		    (char)BLUE.g > */
+			/* 	    255) { */
+			/* 		g_up = false; */
+			/* 		rotating_lines[line]->color.g -= */
+			/* 			(char)(BLUE.g); */
+			/* 	} */
+			/* 	rotating_lines[line]->color.g += (char)(BLUE.g); */
+
+			/* } else { */
+			/* 	if (rotating_lines[line]->color.g - */
+			/* 			    (char)BLUE.g < */
+			/* 		    0 || */
+			/* 	    rotating_lines[line]->color.g - */
+			/* 			    (char)BLUE.g > */
+			/* 		    rotating_lines[line]->color.g) { */
+			/* 		g_up = true; */
+			/* 		rotating_lines[line]->color.g += */
+			/* 			(char)(BLUE.g); */
+			/* 	} */
+			/* 	rotating_lines[line]->color.g += (char)(BLUE.g); */
+			/* } */
+
+			/* if (b_up) { */
+			/* 	if (rotating_lines[line]->color.b + */
+			/* 		    (char)BLUE.b > */
+			/* 	    255) { */
+			/* 		b_up = false; */
+			/* 		rotating_lines[line]->color.b -= */
+			/* 			(char)(BLUE.b); */
+			/* 	} */
+			/* 	rotating_lines[line]->color.b += (char)(BLUE.b); */
+
+			/* } else { */
+			/* 	if (rotating_lines[line]->color.b - */
+			/* 			    (char)BLUE.b < */
+			/* 		    0 || */
+			/* 	    rotating_lines[line]->color.b - */
+			/* 			    (char)BLUE.b > */
+			/* 		    rotating_lines[line]->color.b) { */
+			/* 		b_up = true; */
+			/* 		rotating_lines[line]->color.b += */
+			/* 			(char)(BLUE.b); */
+			/* 	} */
+			/* 	rotating_lines[line]->color.b += (char)(BLUE.b); */
+			/* } */
 		}
 
 		BeginDrawing();
@@ -261,17 +370,6 @@ void GameLoop()
 			DrawLineLine(rotating_lines[line]);
 		}
 
-		/* DrawLineLine(horizontal); */
-		/* DrawLineLine(vertical); */
-		/* DrawLineLine(origin_along_x); */
-		/* DrawLineLine(t_origin); */
-		/* DrawLineLine(transform_origin); */
-		/* DrawLineLine(t2_origin); */
-		/* DrawLineLine(t3_origin); */
-		/* DrawLineLine(custom_deg); */
-		/* DrawLineLine(ninety_deg); */
-		/* DrawLineLine(one_eighty_deg); */
-		/* DrawLineLine(two_fourty_deg); */
 		EndDrawing();
 	}
 
