@@ -13,7 +13,7 @@
 #define Y_ORIGIN (0.0f)
 #define WIDTH (1080.0f)
 #define HEIGHT (1080.0f)
-#define lines_length 100
+#define lines_length 1000
 #define colors_length 10
 
 #define DrawLineLine(line) DrawLineV(line->start, line->end, line->color)
@@ -219,7 +219,7 @@ void GameLoop()
 			   (Vector2){ 800.0f, Y_ORIGIN + 400.0f }, YELLOW);
 
 	Line_ptr *rotating_lines[lines_length] = { 0 };
-	float angle = 3.6f;
+	float angle = 1.0f;
 	float l_angle = 0.0f;
 
 	Color colors[colors_length] = {
@@ -232,6 +232,7 @@ void GameLoop()
 		/* rotating_lines[line]->color = colors[line % 2]; */
 		rotating_lines[line]->color = line % 2 == 0 ? BLUE : GREEN;
 		l_angle += angle;
+		print_zu(line);
 	}
 
 	InitWindow((int)WIDTH, (int)HEIGHT, "Physics Sandbox");
