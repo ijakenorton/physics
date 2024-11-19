@@ -11,9 +11,9 @@
 
 #define X_ORIGIN (0.0f)
 #define Y_ORIGIN (0.0f)
-#define WIDTH (1080.0f)
+#define WIDTH (1920.0f)
 #define HEIGHT (1080.0f)
-#define lines_length 1000
+#define lines_length 900
 #define colors_length 10
 
 #define DrawLineLine(line) DrawLineV(line->start, line->end, line->color)
@@ -205,7 +205,7 @@ void assert_with_message(bool condition, char *message)
 	}
 }
 
-void GameLoop()
+void spiral()
 {
 	Line_ptr *horizontal = l_init_def((Vector2){ 0.0f, HEIGHT / 2.0f },
 					  (Vector2){ WIDTH, HEIGHT / 2.0f },
@@ -215,11 +215,11 @@ void GameLoop()
 					(Vector2){ WIDTH / 2.0f, 0.0f }, WHITE);
 
 	Line_ptr *origin_along_x =
-		l_init_def((Vector2){ 50.0f, 50.0f },
-			   (Vector2){ 800.0f, Y_ORIGIN + 400.0f }, YELLOW);
+		l_init_def((Vector2){ 80.0f, 80.0f },
+			   (Vector2){ 500.0f, Y_ORIGIN + 400.0f }, YELLOW);
 
 	Line_ptr *rotating_lines[lines_length] = { 0 };
-	float angle = 1.0f;
+	float angle = 0.8f;
 	float l_angle = 0.0f;
 
 	Color colors[colors_length] = {
@@ -229,10 +229,12 @@ void GameLoop()
 	for (size_t line = 0; line < lines_length; ++line) {
 		rotating_lines[line] = l_world_to_screen(
 			l_transform_deg(origin_along_x, l_angle));
-		/* rotating_lines[line]->color = colors[line % 2]; */
-		rotating_lines[line]->color = line % 2 == 0 ? BLUE : GREEN;
+		rotating_lines[line]->color = colors[line % 1];
+		/* if (line < 100) { */
+		/* 	rotating_lines[line]->color = GOLD; */
+		/* } */
+		/* rotating_lines[line]->color = line % 2 == 0 ? BLUE : GREEN; */
 		l_angle += angle;
-		print_zu(line);
 	}
 
 	InitWindow((int)WIDTH, (int)HEIGHT, "Physics Sandbox");
@@ -247,7 +249,7 @@ void GameLoop()
 		powf(rotating_lines[0]->end.x - rotating_lines[0]->start.x, 2) +
 		powf(rotating_lines[0]->end.y - rotating_lines[0]->start.y, 2));
 
-	const float max_length = 800.0f;
+	const float max_length = 500.0f;
 	print_float(max_length);
 
 	while (!WindowShouldClose()) {
@@ -260,12 +262,18 @@ void GameLoop()
 					     rotating_lines[line]->start.y,
 				     2));
 			if (decreasing) {
-				rotating_lines[line]->color =
-					color_equals(
-						rotating_lines[line]->color,
-						GREEN) ?
-						BLUE :
-						GREEN;
+				/* rotating_lines[line]->color = */
+				/* 	color_equals( */
+				/* 		rotating_lines[line]->color, */
+				/* 		GREEN) ? */
+				/* 		BLUE : */
+				/* 		GREEN; */
+				/* rotating_lines[line]->color = */
+				/* 	color_equals( */
+				/* 		rotating_lines[line]->color, */
+				/* 		RED) ? */
+				/* 		YELLOW : */
+				/* 		rotating_lines[line]->color; */
 				if (original_length - angle <= 5.0f) {
 					decreasing = false;
 					original_length += angle;
@@ -273,13 +281,19 @@ void GameLoop()
 				original_length -= angle;
 
 			} else {
-				rotating_lines[line]->color =
-					color_equals(
-						rotating_lines[line]->color,
-						BLUE) ?
-						YELLOW :
-						RED;
+				/* rotating_lines[line]->color = */
+				/* 	color_equals( */
+				/* 		rotating_lines[line]->color, */
+				/* 		BLUE) ? */
+				/* 		YELLOW : */
+				/* 		RED; */
 
+				/* rotating_lines[line]->color = */
+				/* 	color_equals( */
+				/* 		rotating_lines[line]->color, */
+				/* 		GREEN) ? */
+				/* 		YELLOW : */
+				/* 		rotating_lines[line]->color; */
 				if (original_length + angle >= max_length) {
 					decreasing = true;
 					original_length -= angle;
@@ -290,54 +304,56 @@ void GameLoop()
 			l_screen_to_world_mut(rotating_lines[line]);
 			l_transform_deg_mut(rotating_lines[line], angle,
 					    original_length);
+			l_translate_mut(rotating_lines[line],
+					(Vector2){ 1.0f, 1.0f });
 			l_world_to_screen_mut(rotating_lines[line]);
 
-			/* if (r_up) { */
-			/* 	if (rotating_lines[line]->color.r + */
-			/* 		    (char)BLUE.r > */
-			/* 	    255) { */
-			/* 		r_up = false; */
-			/* 		rotating_lines[line]->color.r -= */
-			/* 			(char)(BLUE.r); */
-			/* 	} */
-			/* 	rotating_lines[line]->color.r += (char)(BLUE.r); */
+			if (r_up) {
+				if (rotating_lines[line]->color.r +
+					    (char)BLUE.r >
+				    255) {
+					r_up = false;
+					rotating_lines[line]->color.r -=
+						(char)(BLUE.r);
+				}
+				rotating_lines[line]->color.r += (char)1;
 
-			/* } else { */
-			/* 	if (rotating_lines[line]->color.r - */
-			/* 			    (char)BLUE.r < */
-			/* 		    0 || */
-			/* 	    rotating_lines[line]->color.r - */
-			/* 			    (char)BLUE.r > */
-			/* 		    rotating_lines[line]->color.r) { */
-			/* 		r_up = true; */
-			/* 		rotating_lines[line]->color.r += */
-			/* 			(char)(BLUE.r); */
-			/* 	} */
-			/* 	rotating_lines[line]->color.r += (char)(BLUE.r); */
-			/* } */
-			/* if (g_up) { */
-			/* 	if (rotating_lines[line]->color.g + */
-			/* 		    (char)BLUE.g > */
-			/* 	    255) { */
-			/* 		g_up = false; */
-			/* 		rotating_lines[line]->color.g -= */
-			/* 			(char)(BLUE.g); */
-			/* 	} */
-			/* 	rotating_lines[line]->color.g += (char)(BLUE.g); */
+			} else {
+				if (rotating_lines[line]->color.r -
+						    (char)BLUE.r <
+					    0 ||
+				    rotating_lines[line]->color.r -
+						    (char)BLUE.r >
+					    rotating_lines[line]->color.r) {
+					r_up = true;
+					rotating_lines[line]->color.r +=
+						(char)(BLUE.r);
+				}
+				rotating_lines[line]->color.r += (char)1;
+			}
+			if (g_up) {
+				if (rotating_lines[line]->color.g +
+					    (char)BLUE.g >
+				    255) {
+					g_up = false;
+					rotating_lines[line]->color.g -=
+						(char)(BLUE.g);
+				}
+				rotating_lines[line]->color.g += (char)1;
 
-			/* } else { */
-			/* 	if (rotating_lines[line]->color.g - */
-			/* 			    (char)BLUE.g < */
-			/* 		    0 || */
-			/* 	    rotating_lines[line]->color.g - */
-			/* 			    (char)BLUE.g > */
-			/* 		    rotating_lines[line]->color.g) { */
-			/* 		g_up = true; */
-			/* 		rotating_lines[line]->color.g += */
-			/* 			(char)(BLUE.g); */
-			/* 	} */
-			/* 	rotating_lines[line]->color.g += (char)(BLUE.g); */
-			/* } */
+			} else {
+				if (rotating_lines[line]->color.g -
+						    (char)BLUE.g <
+					    0 ||
+				    rotating_lines[line]->color.g -
+						    (char)BLUE.g >
+					    rotating_lines[line]->color.g) {
+					g_up = true;
+					rotating_lines[line]->color.g +=
+						(char)(BLUE.g);
+				}
+				rotating_lines[line]->color.g += (char)1;
+			}
 
 			/* if (b_up) { */
 			/* 	if (rotating_lines[line]->color.b + */
@@ -379,5 +395,5 @@ void GameLoop()
 
 int main(void)
 {
-	GameLoop();
+	spiral();
 }
