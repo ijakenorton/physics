@@ -21,7 +21,7 @@ Vector2 origin = { X_ORIGIN, Y_ORIGIN };
 Vector2 centre = { WIDTH / 2.0f, HEIGHT / 2.0f };
 
 static Arena default_arena = { 0 };
-static Arena temporary_arena = { 0 };
+/* static Arena temporary_arena = { 0 }; */
 static Arena *context_arena = &default_arena;
 
 void *context_alloc(size_t size)
@@ -47,8 +47,7 @@ typedef struct {
 // Vector operations now return values instead of pointers
 Vector2 v_translate(Vector2 old, Vector2 offset)
 {
-	Vector2 v;
-	v.x = old.x + offset.x;
+	Vector2 v v.x = old.x + offset.x;
 	v.y = old.y + offset.y;
 	return v;
 }
@@ -207,13 +206,6 @@ void assert_with_message(bool condition, char *message)
 
 void spiral()
 {
-	Line_ptr *horizontal = l_init_def((Vector2){ 0.0f, HEIGHT / 2.0f },
-					  (Vector2){ WIDTH, HEIGHT / 2.0f },
-					  WHITE);
-
-	Line_ptr *vertical = l_init_def((Vector2){ WIDTH / 2.0f, HEIGHT },
-					(Vector2){ WIDTH / 2.0f, 0.0f }, WHITE);
-
 	Line_ptr *origin_along_x =
 		l_init_def((Vector2){ 80.0f, 80.0f },
 			   (Vector2){ 500.0f, Y_ORIGIN + 400.0f }, YELLOW);
@@ -230,10 +222,6 @@ void spiral()
 		rotating_lines[line] = l_world_to_screen(
 			l_transform_deg(origin_along_x, l_angle));
 		rotating_lines[line]->color = colors[line % 1];
-		/* if (line < 100) { */
-		/* 	rotating_lines[line]->color = GOLD; */
-		/* } */
-		/* rotating_lines[line]->color = line % 2 == 0 ? BLUE : GREEN; */
 		l_angle += angle;
 	}
 
@@ -242,7 +230,6 @@ void spiral()
 
 	bool r_up = false;
 	bool g_up = false;
-	bool b_up = false;
 	bool decreasing = true;
 
 	float original_length = sqrtf(
@@ -262,18 +249,6 @@ void spiral()
 					     rotating_lines[line]->start.y,
 				     2));
 			if (decreasing) {
-				/* rotating_lines[line]->color = */
-				/* 	color_equals( */
-				/* 		rotating_lines[line]->color, */
-				/* 		GREEN) ? */
-				/* 		BLUE : */
-				/* 		GREEN; */
-				/* rotating_lines[line]->color = */
-				/* 	color_equals( */
-				/* 		rotating_lines[line]->color, */
-				/* 		RED) ? */
-				/* 		YELLOW : */
-				/* 		rotating_lines[line]->color; */
 				if (original_length - angle <= 5.0f) {
 					decreasing = false;
 					original_length += angle;
@@ -281,19 +256,6 @@ void spiral()
 				original_length -= angle;
 
 			} else {
-				/* rotating_lines[line]->color = */
-				/* 	color_equals( */
-				/* 		rotating_lines[line]->color, */
-				/* 		BLUE) ? */
-				/* 		YELLOW : */
-				/* 		RED; */
-
-				/* rotating_lines[line]->color = */
-				/* 	color_equals( */
-				/* 		rotating_lines[line]->color, */
-				/* 		GREEN) ? */
-				/* 		YELLOW : */
-				/* 		rotating_lines[line]->color; */
 				if (original_length + angle >= max_length) {
 					decreasing = true;
 					original_length -= angle;
@@ -354,30 +316,6 @@ void spiral()
 				}
 				rotating_lines[line]->color.g += (char)1;
 			}
-
-			/* if (b_up) { */
-			/* 	if (rotating_lines[line]->color.b + */
-			/* 		    (char)BLUE.b > */
-			/* 	    255) { */
-			/* 		b_up = false; */
-			/* 		rotating_lines[line]->color.b -= */
-			/* 			(char)(BLUE.b); */
-			/* 	} */
-			/* 	rotating_lines[line]->color.b += (char)(BLUE.b); */
-
-			/* } else { */
-			/* 	if (rotating_lines[line]->color.b - */
-			/* 			    (char)BLUE.b < */
-			/* 		    0 || */
-			/* 	    rotating_lines[line]->color.b - */
-			/* 			    (char)BLUE.b > */
-			/* 		    rotating_lines[line]->color.b) { */
-			/* 		b_up = true; */
-			/* 		rotating_lines[line]->color.b += */
-			/* 			(char)(BLUE.b); */
-			/* 	} */
-			/* 	rotating_lines[line]->color.b += (char)(BLUE.b); */
-			/* } */
 		}
 
 		BeginDrawing();
@@ -393,7 +331,159 @@ void spiral()
 	CloseWindow();
 }
 
+#define MAX_FRAME_SPEED 15
+#define MIN_FRAME_SPEED 1
+void sprite_anim()
+{
+	// Initialization
+	//--------------------------------------------------------------------------------------
+	const int screenWidth = 800;
+	const int screenHeight = 450;
+
+	InitWindow(screenWidth, screenHeight,
+		   "raylib [texture] example - sprite anim");
+
+	// NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
+	Texture2D scarfy =
+		LoadTexture("resources/scarfy.png"); // Texture loading
+
+	Vector2 position = { 350.0f, 280.0f };
+	Rectangle frameRec = { 0.0f, 0.0f, (float)scarfy.width / 6,
+			       (float)scarfy.height };
+
+	int currentFrame = 0;
+
+	int framesCounter = 0;
+	int framesSpeed = 8; // Number of spritesheet frames shown by second
+
+	SetTargetFPS(60); // Set our game to run at 60 frames-per-second
+	//--------------------------------------------------------------------------------------
+
+	// Main game loop
+	while (!WindowShouldClose()) // Detect window close button or ESC key
+	{
+		// Update
+		//----------------------------------------------------------------------------------
+		framesCounter++;
+
+		if (framesCounter >= (60 / framesSpeed)) {
+			framesCounter = 0;
+			currentFrame++;
+
+			if (currentFrame > 5)
+				currentFrame = 0;
+
+			frameRec.x =
+				(float)currentFrame * (float)scarfy.width / 6;
+		}
+		/* bool down = */
+
+		if (IsKeyPressed(KEY_DOWN) || IsKeyDown(KEY_DOWN)) {
+			print_float(position.y);
+			position.y++;
+		}
+		if (IsKeyPressed(KEY_UP) || IsKeyDown(KEY_UP)) {
+			print_float(position.y);
+			position.y--;
+		}
+		// Control frames speed
+		if (IsKeyPressed(KEY_RIGHT))
+			framesSpeed++;
+		else if (IsKeyPressed(KEY_LEFT))
+			framesSpeed--;
+
+		if (framesSpeed > MAX_FRAME_SPEED)
+			framesSpeed = MAX_FRAME_SPEED;
+		else if (framesSpeed < MIN_FRAME_SPEED)
+			framesSpeed = MIN_FRAME_SPEED;
+		//----------------------------------------------------------------------------------
+
+		// Draw
+		//----------------------------------------------------------------------------------
+		BeginDrawing();
+
+		ClearBackground(RAYWHITE);
+
+		DrawTexture(scarfy, 15, 40, WHITE);
+		DrawRectangleLines(15, 40, scarfy.width, scarfy.height, LIME);
+		DrawRectangleLines(15 + (int)frameRec.x, 40 + (int)frameRec.y,
+				   (int)frameRec.width, (int)frameRec.height,
+				   RED);
+
+		DrawText("FRAME SPEED: ", 165, 210, 10, DARKGRAY);
+		DrawText(TextFormat("%02i FPS", framesSpeed), 575, 210, 10,
+			 DARKGRAY);
+		DrawText("PRESS RIGHT/LEFT KEYS to CHANGE SPEED!", 290, 240, 10,
+			 DARKGRAY);
+
+		for (int i = 0; i < MAX_FRAME_SPEED; i++) {
+			if (i < framesSpeed)
+				DrawRectangle(250 + 21 * i, 205, 20, 20, RED);
+			DrawRectangleLines(250 + 21 * i, 205, 20, 20, MAROON);
+		}
+
+		DrawTextureRec(scarfy, frameRec, position,
+			       WHITE); // Draw part of the texture
+
+		DrawText("(c) Scarfy sprite by Eiden Marsal", screenWidth - 200,
+			 screenHeight - 20, 10, GRAY);
+
+		EndDrawing();
+		//----------------------------------------------------------------------------------
+	}
+
+	// De-Initialization
+	//--------------------------------------------------------------------------------------
+	UnloadTexture(scarfy); // Texture unloading
+
+	CloseWindow(); // Close window and OpenGL context
+}
+
+void simple_texture()
+{
+	// Initialization
+	//--------------------------------------------------------------------------------------
+	const int screenWidth = 320;
+	const int screenHeight = 320;
+
+	InitWindow(screenWidth, screenHeight, "Basic sprites");
+
+	// NOTE: Be careful, background width must be equal or bigger than screen width
+	// if not, texture should be draw more than two times for scrolling effect
+	Texture2D all = LoadTexture("resources/space_assets.png");
+
+	SetTargetFPS(60); // Set our game to run at 60 frames-per-second
+	//--------------------------------------------------------------------------------------
+
+	// Main game loop
+	while (!WindowShouldClose()) // Detect window close button or ESC key
+	{
+		// Update
+		//----------------------------------------------------------------------------------
+		// Draw
+		//----------------------------------------------------------------------------------
+		BeginDrawing();
+
+		ClearBackground(GetColor(0x052c46ff));
+
+		// Draw background image twice
+		// NOTE: Texture is scaled twice its size
+		DrawTextureEx(all, (Vector2){ 20, 20 }, 0.0f, 0.5f, WHITE);
+		EndDrawing();
+		//----------------------------------------------------------------------------------
+	}
+
+	// De-Initialization
+	//--------------------------------------------------------------------------------------
+	UnloadTexture(all); // Unload background texture
+
+	CloseWindow(); // Close window and OpenGL context
+	//--------------------------------------------------------------------------------------
+}
 int main(void)
 {
-	spiral();
+	/* spiral(); */
+	/* sprite_explosion(); */
+	/* simple_texture(); */
+	sprite_anim();
 }
